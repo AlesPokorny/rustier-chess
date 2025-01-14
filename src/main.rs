@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
-mod bitmap;
+mod bitboard;
+mod board;
 
 fn main() {
     println!("Hello, world!");
