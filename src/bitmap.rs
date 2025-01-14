@@ -24,7 +24,7 @@ impl BitMap {
 
     pub fn get_ones(&self) -> Vec<u8> {
         let mut result: Vec<u8> = Vec::new();
-        let mut le_clone = self.clone();
+        let mut le_clone = *self;
 
         let mut n_zeros = le_clone.value.trailing_zeros() as u8;
 
@@ -40,7 +40,7 @@ impl BitMap {
 
     pub fn get_zeros(&self) -> Vec<u8> {
         let mut result: Vec<u8> = Vec::new();
-        let mut le_clone = self.clone();
+        let mut le_clone = *self;
 
         let mut n_zeros = le_clone.value.trailing_ones() as u8;
 
@@ -66,7 +66,6 @@ impl fmt::Binary for BitMap {
         fmt::Binary::fmt(&self.value, f)
     }
 }
-
 
 #[cfg(test)]
 mod test_bitmap {
@@ -111,7 +110,7 @@ mod test_bitmap {
         let bitmap = BitMap::new(5);
 
         let ones = bitmap.get_ones();
-        
+
         assert_eq!(ones, vec![0, 2]);
     }
 
@@ -121,7 +120,7 @@ mod test_bitmap {
 
         let ones = bitmap.get_zeros();
         let expected_result: Vec<u8> = (0..64).filter(|x| ![0, 2].contains(x)).collect();
-        
+
         assert_eq!(ones, expected_result);
     }
 }
