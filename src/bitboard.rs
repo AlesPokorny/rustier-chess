@@ -1,4 +1,7 @@
-use std::{fmt, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not}};
+use std::{
+    fmt,
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not},
+};
 
 #[derive(Clone, Copy)]
 pub struct BitBoard(u64);
@@ -61,9 +64,9 @@ impl fmt::Display for BitBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for i in 0..8_u8 {
             for j in 0..8_u8 {
-                write!(f, "{}", self.read_bit(i*8+j) as u8)?;
+                write!(f, "{}", self.read_bit(i * 8 + j) as u8)?;
             }
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
         Ok(())
     }
@@ -83,7 +86,7 @@ impl BitAnd for BitBoard {
     }
 }
 
-impl BitAndAssign for BitBoard {   
+impl BitAndAssign for BitBoard {
     fn bitand_assign(&mut self, rhs: Self) {
         self.0 = self.0 & rhs.0
     }
@@ -97,7 +100,7 @@ impl BitOr for BitBoard {
     }
 }
 
-impl BitOrAssign for BitBoard {   
+impl BitOrAssign for BitBoard {
     fn bitor_assign(&mut self, rhs: Self) {
         self.0 = self.0 | rhs.0
     }
@@ -111,7 +114,7 @@ impl BitXor for BitBoard {
     }
 }
 
-impl BitXorAssign for BitBoard {   
+impl BitXorAssign for BitBoard {
     fn bitxor_assign(&mut self, rhs: Self) {
         self.0 = self.0 ^ rhs.0
     }
@@ -121,7 +124,7 @@ impl Not for BitBoard {
     type Output = Self;
 
     fn not(self) -> Self::Output {
-        Self(!self.0)   
+        Self(!self.0)
     }
 }
 
@@ -181,5 +184,4 @@ mod test_bitboard {
 
         assert_eq!(ones, expected_result);
     }
-    
 }

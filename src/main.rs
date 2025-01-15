@@ -2,8 +2,8 @@
 
 mod bitboard;
 mod board;
-mod piece;
 mod game;
+mod piece;
 
 use crate::bitboard::BitBoard;
 
