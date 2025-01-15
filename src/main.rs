@@ -2,7 +2,13 @@
 
 mod bitboard;
 mod board;
+mod piece;
+mod game;
+
+use crate::bitboard::BitBoard;
 
 fn main() {
-    println!("Hello, world!");
+    let a = BitBoard::new(199);
+
+    println!("{}", a);
 }

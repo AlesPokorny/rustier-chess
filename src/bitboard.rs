@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not}};
 
 #[derive(Clone, Copy)]
 pub struct BitBoard(u64);
@@ -59,13 +59,69 @@ impl BitBoard {
 
 impl fmt::Display for BitBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
+        for i in 0..8_u8 {
+            for j in 0..8_u8 {
+                write!(f, "{}", self.read_bit(i*8+j) as u8)?;
+            }
+            write!(f, "\n")?;
+        }
+        Ok(())
     }
 }
 
 impl fmt::Binary for BitBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Binary::fmt(&self.0, f)
+    }
+}
+
+impl BitAnd for BitBoard {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl BitAndAssign for BitBoard {   
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 = self.0 & rhs.0
+    }
+}
+
+impl BitOr for BitBoard {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl BitOrAssign for BitBoard {   
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 = self.0 | rhs.0
+    }
+}
+
+impl BitXor for BitBoard {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl BitXorAssign for BitBoard {   
+    fn bitxor_assign(&mut self, rhs: Self) {
+        self.0 = self.0 ^ rhs.0
+    }
+}
+
+impl Not for BitBoard {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        Self(!self.0)   
     }
 }
 
