@@ -5,10 +5,10 @@ mod board;
 mod game;
 mod piece;
 
-use crate::bitboard::BitBoard;
+use crate::board::Board;
 
 fn main() {
-    let a = BitBoard::new(199);
+    let a = Board::default();
 
     println!("{}", a);
 }
