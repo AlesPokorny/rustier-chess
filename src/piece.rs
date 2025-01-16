@@ -29,49 +29,23 @@ impl Piece {
 
 impl Display for Piece {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.piece {
-            PieceType::P => {
-                if self.color == Color::W {
-                    write!(f, "P")
-                } else {
-                    write!(f, "p")
-                }
-            }
-            PieceType::R => {
-                if self.color == Color::W {
-                    write!(f, "R")
-                } else {
-                    write!(f, "r")
-                }
-            }
-            PieceType::N => {
-                if self.color == Color::W {
-                    write!(f, "N")
-                } else {
-                    write!(f, "n")
-                }
-            }
-            PieceType::B => {
-                if self.color == Color::W {
-                    write!(f, "B")
-                } else {
-                    write!(f, "b")
-                }
-            }
-            PieceType::Q => {
-                if self.color == Color::W {
-                    write!(f, "Q")
-                } else {
-                    write!(f, "q")
-                }
-            }
-            PieceType::K => {
-                if self.color == Color::W {
-                    write!(f, "K")
-                } else {
-                    write!(f, "k")
-                }
-            }
+        match self.color {
+            Color::W => match self.piece {
+                PieceType::P => write!(f, "P"),
+                PieceType::R => write!(f, "R"),
+                PieceType::N => write!(f, "N"),
+                PieceType::B => write!(f, "B"),
+                PieceType::Q => write!(f, "Q"),
+                PieceType::K => write!(f, "K"),
+            },
+            Color::B => match self.piece {
+                PieceType::P => write!(f, "p"),
+                PieceType::R => write!(f, "r"),
+                PieceType::N => write!(f, "n"),
+                PieceType::B => write!(f, "b"),
+                PieceType::Q => write!(f, "q"),
+                PieceType::K => write!(f, "k"),
+            },
         }
     }
 }
