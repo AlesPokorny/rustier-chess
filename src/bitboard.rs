@@ -1,9 +1,12 @@
 use std::{
     fmt,
-    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not},
+    ops::{
+        BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
+        ShrAssign,
+    },
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash)]
 pub struct BitBoard(u64);
 
 impl BitBoard {
@@ -55,8 +58,16 @@ impl BitBoard {
         }
     }
 
+    pub fn zeros() -> Self {
+        Self(0)
+    }
+
     pub fn is_empty(&self) -> bool {
         self.0 == 0
+    }
+
+    pub fn as_u64(&self) -> u64 {
+        self.0
     }
 }
 
@@ -125,6 +136,34 @@ impl Not for BitBoard {
 
     fn not(self) -> Self::Output {
         Self(!self.0)
+    }
+}
+
+impl Shl<u8> for BitBoard {
+    type Output = Self;
+
+    fn shl(self, rhs: u8) -> Self::Output {
+        Self(self.0 << rhs)
+    }
+}
+
+impl ShlAssign<u8> for BitBoard {
+    fn shl_assign(&mut self, rhs: u8) {
+        self.0 <<= rhs
+    }
+}
+
+impl Shr<u8> for BitBoard {
+    type Output = Self;
+
+    fn shr(self, rhs: u8) -> Self::Output {
+        Self(self.0 >> rhs)
+    }
+}
+
+impl ShrAssign<u8> for BitBoard {
+    fn shr_assign(&mut self, rhs: u8) {
+        self.0 >>= rhs
     }
 }
 

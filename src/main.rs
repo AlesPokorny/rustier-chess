@@ -3,6 +3,7 @@
 mod bitboard;
 mod board;
 mod game;
+mod moves;
 mod piece;
 
 use crate::board::Board;
