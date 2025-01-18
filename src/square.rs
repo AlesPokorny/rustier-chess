@@ -30,6 +30,14 @@ impl Square {
     pub fn add(&self, rhs: u8) -> Self {
         Self(self.0 + rhs)
     }
+
+    pub fn get_row(&self) -> u8 {
+        self.0 / 8
+    }
+
+    pub fn get_file(&self) -> u8 {
+        self.0 % 8
+    }
 }
 
 impl FromStr for Square {

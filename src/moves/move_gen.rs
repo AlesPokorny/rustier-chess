@@ -21,7 +21,7 @@ pub fn get_pawn_moves(
         }
 
         // Attacking moves
-        attacking_moves = match square.as_u8() % 8 {
+        attacking_moves = match square.get_file() {
             0 => pawn_position << 9,
             7 => pawn_position << 7,
             _ => pawn_position << 7 | pawn_position << 9,
@@ -35,7 +35,7 @@ pub fn get_pawn_moves(
         }
 
         // Attacking moves
-        attacking_moves = match square.as_u8() % 8 {
+        attacking_moves = match square.get_file() {
             0 => pawn_position >> 7,
             7 => pawn_position >> 9,
             _ => pawn_position >> 7 | pawn_position >> 9,
@@ -72,7 +72,7 @@ pub fn get_knight_moves(square: &Square, board: &Board, color: &usize) -> Vec<Mo
         }
 
         if (color == &Color::WHITE && !board.colors[Color::WHITE].read_square(square))
-            | (color == &Color::BLACK && !board.colors[Color::WHITE].read_square(square))
+            | (color == &Color::BLACK && !board.colors[Color::BLACK].read_square(square))
         {
             destinations.push(Move::from_origin_and_destination(
                 &Square::new(new_bit as u8),
