@@ -23,7 +23,7 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn get_piece_at_bit(&self, bit: u8) -> Option<Piece> {
+    pub fn get_piece_at_bit(&self, bit: &u8) -> Option<Piece> {
         let color = if self.white_pieces.read_bit(bit) {
             Color::W
         } else if self.black_pieces.read_bit(bit) {
@@ -49,6 +49,26 @@ impl Board {
         };
 
         Some(Piece::new(piece, color))
+    }
+
+    #[cfg(test)]
+    pub fn empty() -> Self {
+        Board {
+            white_pawns: BitBoard::zeros(),
+            white_rooks: BitBoard::zeros(),
+            white_knights: BitBoard::zeros(),
+            white_bishops: BitBoard::zeros(),
+            white_queens: BitBoard::zeros(),
+            white_king: BitBoard::zeros(),
+            black_pawns: BitBoard::zeros(),
+            black_rooks: BitBoard::zeros(),
+            black_knights: BitBoard::zeros(),
+            black_bishops: BitBoard::zeros(),
+            black_queens: BitBoard::zeros(),
+            black_king: BitBoard::zeros(),
+            white_pieces: BitBoard::zeros(),
+            black_pieces: BitBoard::zeros(),
+        }
     }
 }
 
@@ -80,7 +100,7 @@ impl fmt::Display for Board {
             write!(f, "\n {} |", 8 - row)?;
             let row_i = 56 - row * 8;
             for col in 0..8_u8 {
-                match self.get_piece_at_bit(row_i + col) {
+                match self.get_piece_at_bit(&(row_i + col)) {
                     // 63 - (row * 8 + 7 - col)
                     Some(piece) => write!(f, " {} |", piece)?,
                     None => write!(f, "   |")?,

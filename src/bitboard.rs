@@ -14,15 +14,15 @@ impl BitBoard {
         Self(value)
     }
 
-    pub fn read_bit(&self, bit: u8) -> bool {
+    pub fn read_bit(&self, bit: &u8) -> bool {
         self.0 & (1 << bit) != 0
     }
 
-    pub fn set_zero(&mut self, bit: u8) {
+    pub fn set_zero(&mut self, bit: &u8) {
         self.0 &= !(1 << bit);
     }
 
-    pub fn set_one(&mut self, bit: u8) {
+    pub fn set_one(&mut self, bit: &u8) {
         self.0 |= 1 << bit;
     }
 
@@ -37,7 +37,7 @@ impl BitBoard {
                 return result;
             }
             result.push(n_zeros);
-            le_clone.set_zero(n_zeros);
+            le_clone.set_zero(&n_zeros);
             n_zeros = le_clone.0.trailing_zeros() as u8;
         }
     }
@@ -46,20 +46,26 @@ impl BitBoard {
         let mut result: Vec<u8> = Vec::new();
         let mut le_clone = *self;
 
-        let mut n_zeros = le_clone.0.trailing_ones() as u8;
+        let mut n_ones = le_clone.0.trailing_ones() as u8;
 
         loop {
-            if n_zeros == 64 {
+            if n_ones == 64 {
                 return result;
             }
-            result.push(n_zeros);
-            le_clone.set_one(n_zeros);
-            n_zeros = le_clone.0.trailing_ones() as u8;
+            result.push(n_ones);
+            le_clone.set_one(&n_ones);
+            n_ones = le_clone.0.trailing_ones() as u8;
         }
     }
 
     pub fn zeros() -> Self {
         Self(0)
+    }
+
+    pub fn zeros_with_one_bit(bit: &u8) -> Self {
+        let mut bb = Self(0);
+        bb.set_one(bit);
+        bb
     }
 
     pub fn is_empty(&self) -> bool {
@@ -75,7 +81,7 @@ impl fmt::Display for BitBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for i in 0..8_u8 {
             for j in 0..8_u8 {
-                write!(f, "{}", self.read_bit(i * 8 + j) as u8)?;
+                write!(f, "{}", self.read_bit(&(56 - i * 8 + j)) as u8)?;
             }
             writeln!(f)?;
         }
@@ -175,21 +181,21 @@ mod test_bitboard {
     fn test_read_bit() {
         let bitboard = BitBoard::new(5);
 
-        assert_eq!(bitboard.read_bit(0), true);
-        assert_eq!(bitboard.read_bit(1), false);
-        assert_eq!(bitboard.read_bit(2), true);
-        assert_eq!(bitboard.read_bit(3), false);
+        assert_eq!(bitboard.read_bit(&0), true);
+        assert_eq!(bitboard.read_bit(&1), false);
+        assert_eq!(bitboard.read_bit(&2), true);
+        assert_eq!(bitboard.read_bit(&3), false);
     }
 
     #[test]
     fn test_set_zero() {
         let mut bitboard = BitBoard::new(5);
 
-        bitboard.set_zero(2);
+        bitboard.set_zero(&2);
         assert_eq!(bitboard.0, 1);
 
-        bitboard.set_zero(1);
-        bitboard.set_zero(2);
+        bitboard.set_zero(&1);
+        bitboard.set_zero(&2);
         assert_eq!(bitboard.0, 1);
     }
 
@@ -197,11 +203,11 @@ mod test_bitboard {
     fn test_set_one() {
         let mut bitboard = BitBoard::new(5);
 
-        bitboard.set_one(1);
+        bitboard.set_one(&1);
         assert_eq!(bitboard.0, 7);
 
-        bitboard.set_one(1);
-        bitboard.set_one(2);
+        bitboard.set_one(&1);
+        bitboard.set_one(&2);
         assert_eq!(bitboard.0, 7);
     }
 
