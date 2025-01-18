@@ -6,12 +6,18 @@ use crate::{
 };
 
 pub struct Board {
-    pub pawns: BitBoard,
-    pub rooks: BitBoard,
-    pub knights: BitBoard,
-    pub bishops: BitBoard,
-    pub queens: BitBoard,
-    pub kings: BitBoard,
+    pub white_pawns: BitBoard,
+    pub white_rooks: BitBoard,
+    pub white_knights: BitBoard,
+    pub white_bishops: BitBoard,
+    pub white_queens: BitBoard,
+    pub white_king: BitBoard,
+    pub black_pawns: BitBoard,
+    pub black_rooks: BitBoard,
+    pub black_knights: BitBoard,
+    pub black_bishops: BitBoard,
+    pub black_queens: BitBoard,
+    pub black_king: BitBoard,
     pub white_pieces: BitBoard,
     pub black_pieces: BitBoard,
 }
@@ -26,20 +32,20 @@ impl Board {
             return None;
         };
 
-        let piece = if self.pawns.read_bit(bit) {
+        let piece = if (self.white_pawns | self.black_pawns).read_bit(bit) {
             PieceType::P
-        } else if self.rooks.read_bit(bit) {
+        } else if (self.white_rooks | self.black_rooks).read_bit(bit) {
             PieceType::R
-        } else if self.knights.read_bit(bit) {
+        } else if (self.white_knights | self.black_knights).read_bit(bit) {
             PieceType::N
-        } else if self.bishops.read_bit(bit) {
+        } else if (self.white_bishops | self.black_bishops).read_bit(bit) {
             PieceType::B
-        } else if self.queens.read_bit(bit) {
+        } else if (self.white_queens | self.black_queens).read_bit(bit) {
             PieceType::Q
-        } else if self.kings.read_bit(bit) {
+        } else if (self.white_king | self.black_king).read_bit(bit) {
             PieceType::K
         } else {
-            panic!("Boom. Unexpected piece");
+            panic!("Boom. Unexpected piece at bit {}", bit);
         };
 
         Some(Piece::new(piece, color))
@@ -49,30 +55,20 @@ impl Board {
 impl Default for Board {
     fn default() -> Self {
         Self {
-            pawns: BitBoard::new(
-                0b0000000011111111000000000000000000000000000000001111111100000000,
-            ),
-            rooks: BitBoard::new(
-                0b1000000100000000000000000000000000000000000000000000000010000001,
-            ),
-            knights: BitBoard::new(
-                0b0100001000000000000000000000000000000000000000000000000001000010,
-            ),
-            bishops: BitBoard::new(
-                0b0010010000000000000000000000000000000000000000000000000000100100,
-            ),
-            queens: BitBoard::new(
-                0b0000100000000000000000000000000000000000000000000000000000001000,
-            ),
-            kings: BitBoard::new(
-                0b0001000000000000000000000000000000000000000000000000000000010000,
-            ),
-            black_pieces: BitBoard::new(
-                0b1111111111111111000000000000000000000000000000000000000000000000,
-            ),
-            white_pieces: BitBoard::new(
-                0b0000000000000000000000000000000000000000000000001111111111111111,
-            ),
+            white_pawns: BitBoard::new(0xFF00),
+            white_rooks: BitBoard::new(0x81),
+            white_knights: BitBoard::new(0x42),
+            white_bishops: BitBoard::new(0x24),
+            white_queens: BitBoard::new(0x8),
+            white_king: BitBoard::new(0x10),
+            black_pawns: BitBoard::new(0xFF000000000000),
+            black_rooks: BitBoard::new(0x8100000000000000),
+            black_knights: BitBoard::new(0x4200000000000000),
+            black_bishops: BitBoard::new(0x2400000000000000),
+            black_queens: BitBoard::new(0x800000000000000),
+            black_king: BitBoard::new(0x1000000000000000),
+            black_pieces: BitBoard::new(0xFFFF000000000000),
+            white_pieces: BitBoard::new(0xFFFF),
         }
     }
 }
