@@ -5,12 +5,12 @@ mod board;
 mod game;
 mod moves;
 mod piece;
-mod utils;
+mod square;
 
 use crate::board::Board;
 
 fn main() {
     let a = Board::default();
 
-    println!("{}", a.white_king | a.black_king);
+    println!("{}", a.white_pawns);
 }

@@ -3,6 +3,7 @@ use std::fmt;
 use crate::{
     bitboard::BitBoard,
     piece::{Color, Piece, PieceType},
+    square::Square,
 };
 
 pub struct Board {
@@ -23,29 +24,29 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn get_piece_at_bit(&self, bit: &u8) -> Option<Piece> {
-        let color = if self.white_pieces.read_bit(bit) {
+    pub fn get_piece_on_square(&self, square: &Square) -> Option<Piece> {
+        let color = if self.white_pieces.read_square(square) {
             Color::W
-        } else if self.black_pieces.read_bit(bit) {
+        } else if self.black_pieces.read_square(square) {
             Color::B
         } else {
             return None;
         };
 
-        let piece = if (self.white_pawns | self.black_pawns).read_bit(bit) {
+        let piece = if (self.white_pawns | self.black_pawns).read_square(square) {
             PieceType::P
-        } else if (self.white_rooks | self.black_rooks).read_bit(bit) {
+        } else if (self.white_rooks | self.black_rooks).read_square(square) {
             PieceType::R
-        } else if (self.white_knights | self.black_knights).read_bit(bit) {
+        } else if (self.white_knights | self.black_knights).read_square(square) {
             PieceType::N
-        } else if (self.white_bishops | self.black_bishops).read_bit(bit) {
+        } else if (self.white_bishops | self.black_bishops).read_square(square) {
             PieceType::B
-        } else if (self.white_queens | self.black_queens).read_bit(bit) {
+        } else if (self.white_queens | self.black_queens).read_square(square) {
             PieceType::Q
-        } else if (self.white_king | self.black_king).read_bit(bit) {
+        } else if (self.white_king | self.black_king).read_square(square) {
             PieceType::K
         } else {
-            panic!("Boom. Unexpected piece at bit {}", bit);
+            panic!("Boom. Unexpected piece on square {}", square);
         };
 
         Some(Piece::new(piece, color))
@@ -100,7 +101,7 @@ impl fmt::Display for Board {
             write!(f, "\n {} |", 8 - row)?;
             let row_i = 56 - row * 8;
             for col in 0..8_u8 {
-                match self.get_piece_at_bit(&(row_i + col)) {
+                match self.get_piece_on_square(&Square::new(row_i + col)) {
                     // 63 - (row * 8 + 7 - col)
                     Some(piece) => write!(f, " {} |", piece)?,
                     None => write!(f, "   |")?,

@@ -6,6 +6,8 @@ use std::{
     },
 };
 
+use crate::square::Square;
+
 #[derive(Clone, Copy, Hash)]
 pub struct BitBoard(u64);
 
@@ -14,8 +16,8 @@ impl BitBoard {
         Self(value)
     }
 
-    pub fn read_bit(&self, bit: &u8) -> bool {
-        self.0 & (1 << bit) != 0
+    pub fn read_square(&self, bit: &Square) -> bool {
+        self.0 & (1 << bit.as_u8()) != 0
     }
 
     pub fn set_zero(&mut self, bit: &u8) {
@@ -81,7 +83,11 @@ impl fmt::Display for BitBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for i in 0..8_u8 {
             for j in 0..8_u8 {
-                write!(f, "{}", self.read_bit(&(56 - i * 8 + j)) as u8)?;
+                write!(
+                    f,
+                    "{}",
+                    self.read_square(&Square::new(56 - i * 8 + j)) as u8
+                )?;
             }
             writeln!(f)?;
         }
@@ -181,10 +187,10 @@ mod test_bitboard {
     fn test_read_bit() {
         let bitboard = BitBoard::new(5);
 
-        assert_eq!(bitboard.read_bit(&0), true);
-        assert_eq!(bitboard.read_bit(&1), false);
-        assert_eq!(bitboard.read_bit(&2), true);
-        assert_eq!(bitboard.read_bit(&3), false);
+        assert_eq!(bitboard.read_square(&Square::new(0)), true);
+        assert_eq!(bitboard.read_square(&Square::new(1)), false);
+        assert_eq!(bitboard.read_square(&Square::new(2)), true);
+        assert_eq!(bitboard.read_square(&Square::new(3)), false);
     }
 
     #[test]

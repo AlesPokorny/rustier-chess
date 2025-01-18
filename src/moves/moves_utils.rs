@@ -1,4 +1,4 @@
-use crate::piece::PieceType;
+use crate::{piece::PieceType, square::Square};
 
 // bit 0..5     destination
 // bit 6..11    origin
@@ -12,20 +12,24 @@ impl Move {
         Self(0)
     }
 
-    pub fn from_destination(destination: u8) -> Self {
-        Self(destination as u16)
+    pub fn from_destination(square: &Square) -> Self {
+        Self(square.as_u16())
     }
 
-    pub fn from_origin(origin: u8) -> Self {
-        Self((origin as u16) << 5)
+    pub fn from_origin(origin: &Square) -> Self {
+        Self(origin.as_u16() << 5)
     }
 
-    pub fn set_destination(&mut self, destination: u8) {
-        self.0 |= destination as u16
+    pub fn from_origin_and_destination(destination: &Square, origin: &Square) -> Self {
+        Self(destination.as_u16() | (origin.as_u16() << 5))
     }
 
-    pub fn set_origin(&mut self, origin: u8) {
-        self.0 |= (origin as u16) << 5
+    pub fn set_destination(&mut self, square: &Square) {
+        self.0 |= square.as_u16()
+    }
+
+    pub fn set_origin(&mut self, square: &Square) {
+        self.0 |= square.as_u16() << 5
     }
 
     pub fn set_promotion(&mut self, piece_type: PieceType) {
