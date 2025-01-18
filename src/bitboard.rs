@@ -16,20 +16,20 @@ impl BitBoard {
         Self(value)
     }
 
-    pub fn read_square(&self, bit: &Square) -> bool {
-        self.0 & (1 << bit.as_u8()) != 0
+    pub fn read_square(&self, square: &Square) -> bool {
+        self.0 & (1 << square.as_u8()) != 0
     }
 
-    pub fn set_zero(&mut self, bit: &u8) {
-        self.0 &= !(1 << bit);
+    pub fn set_zero(&mut self, square: &Square) {
+        self.0 &= !(1 << square.as_u8());
     }
 
-    pub fn set_one(&mut self, bit: &u8) {
-        self.0 |= 1 << bit;
+    pub fn set_one(&mut self, square: &Square) {
+        self.0 |= 1 << square.as_u8();
     }
 
-    pub fn get_ones(&self) -> Vec<u8> {
-        let mut result: Vec<u8> = Vec::new();
+    pub fn get_ones(&self) -> Vec<Square> {
+        let mut result: Vec<Square> = Vec::new();
         let mut le_clone = *self;
 
         let mut n_zeros = le_clone.0.trailing_zeros() as u8;
@@ -38,14 +38,15 @@ impl BitBoard {
             if n_zeros == 64 {
                 return result;
             }
-            result.push(n_zeros);
-            le_clone.set_zero(&n_zeros);
+            let square = Square::new(n_zeros);
+            le_clone.set_zero(&square);
+            result.push(square);
             n_zeros = le_clone.0.trailing_zeros() as u8;
         }
     }
 
-    pub fn get_zeros(&self) -> Vec<u8> {
-        let mut result: Vec<u8> = Vec::new();
+    pub fn get_zeros(&self) -> Vec<Square> {
+        let mut result: Vec<Square> = Vec::new();
         let mut le_clone = *self;
 
         let mut n_ones = le_clone.0.trailing_ones() as u8;
@@ -54,8 +55,9 @@ impl BitBoard {
             if n_ones == 64 {
                 return result;
             }
-            result.push(n_ones);
-            le_clone.set_one(&n_ones);
+            let square = Square::new(n_ones);
+            le_clone.set_one(&square);
+            result.push(square);
             n_ones = le_clone.0.trailing_ones() as u8;
         }
     }
@@ -64,9 +66,9 @@ impl BitBoard {
         Self(0)
     }
 
-    pub fn zeros_with_one_bit(bit: &u8) -> Self {
+    pub fn zeros_with_one_bit(square: &Square) -> Self {
         let mut bb = Self(0);
-        bb.set_one(bit);
+        bb.set_one(square);
         bb
     }
 
@@ -197,11 +199,11 @@ mod test_bitboard {
     fn test_set_zero() {
         let mut bitboard = BitBoard::new(5);
 
-        bitboard.set_zero(&2);
+        bitboard.set_zero(&Square::new(2));
         assert_eq!(bitboard.0, 1);
 
-        bitboard.set_zero(&1);
-        bitboard.set_zero(&2);
+        bitboard.set_zero(&Square::new(1));
+        bitboard.set_zero(&Square::new(2));
         assert_eq!(bitboard.0, 1);
     }
 
@@ -209,11 +211,11 @@ mod test_bitboard {
     fn test_set_one() {
         let mut bitboard = BitBoard::new(5);
 
-        bitboard.set_one(&1);
+        bitboard.set_one(&Square::new(1));
         assert_eq!(bitboard.0, 7);
 
-        bitboard.set_one(&1);
-        bitboard.set_one(&2);
+        bitboard.set_one(&Square::new(1));
+        bitboard.set_one(&Square::new(2));
         assert_eq!(bitboard.0, 7);
     }
 
@@ -223,7 +225,7 @@ mod test_bitboard {
 
         let ones = bitboard.get_ones();
 
-        assert_eq!(ones, vec![0, 2]);
+        assert_eq!(ones, vec![Square::new(0), Square::new(2)]);
     }
 
     #[test]
@@ -231,7 +233,10 @@ mod test_bitboard {
         let bitboard = BitBoard::new(5);
 
         let ones = bitboard.get_zeros();
-        let expected_result: Vec<u8> = (0..64).filter(|x| ![0, 2].contains(x)).collect();
+        let expected_result: Vec<Square> = (0..64)
+            .filter(|x| ![2].contains(x))
+            .map(|x| Square::new(x))
+            .collect();
 
         assert_eq!(ones, expected_result);
     }

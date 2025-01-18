@@ -4,48 +4,48 @@ use super::moves_utils::Move;
 
 pub fn get_pawn_moves(
     pawn_position: BitBoard,
-    bit: &u8,
+    square: &Square,
     board: &Board,
-    color: Color,
+    color: usize,
 ) -> (BitBoard, BitBoard) {
     let mut possible_positions;
-    let not_all_pieces = !(board.black_pieces & board.white_pieces);
+    let not_all_pieces = !(board.colors[0] & board.colors[1]);
 
     let mut attacking_moves: BitBoard;
-    if color == Color::W {
+    if color == Color::WHITE {
         possible_positions = pawn_position << 8;
         possible_positions &= not_all_pieces;
-        if (8..16).contains(bit) && possible_positions.as_u64() != 0 {
-            possible_positions.set_one(&(bit + 16));
+        if (8..16).contains(&square.as_u8()) && possible_positions.as_u64() != 0 {
+            possible_positions.set_one(&(square.add(16)));
             possible_positions &= not_all_pieces;
         }
 
         // Attacking moves
-        attacking_moves = match bit % 8 {
+        attacking_moves = match square.as_u8() % 8 {
             0 => pawn_position << 9,
             7 => pawn_position << 7,
             _ => pawn_position << 7 | pawn_position << 9,
         };
-        attacking_moves &= board.black_pieces;
+        attacking_moves &= board.colors[Color::BLACK];
     } else {
         possible_positions = pawn_position >> 8;
-        if (48..56).contains(bit) && possible_positions.as_u64() != 0 {
-            possible_positions.set_one(&(bit - 16));
+        if (48..56).contains(&square.as_u8()) && possible_positions.as_u64() != 0 {
+            possible_positions.set_one(&(square.sub(16)));
             possible_positions &= not_all_pieces;
         }
 
         // Attacking moves
-        attacking_moves = match bit % 8 {
+        attacking_moves = match square.as_u8() % 8 {
             0 => pawn_position >> 7,
             7 => pawn_position >> 9,
             _ => pawn_position >> 7 | pawn_position >> 9,
         };
-        attacking_moves &= board.white_pieces;
+        attacking_moves &= board.colors[Color::WHITE];
     }
     (possible_positions, attacking_moves)
 }
 
-pub fn get_knight_moves(square: &Square, board: &Board, color: &Color) -> Vec<Move> {
+pub fn get_knight_moves(square: &Square, board: &Board, color: &usize) -> Vec<Move> {
     let i8_bit = square.as_u8() as i8;
     let bit_col = (square.as_u8() % 8) as i8;
     let pony_moves = [
@@ -71,8 +71,8 @@ pub fn get_knight_moves(square: &Square, board: &Board, color: &Color) -> Vec<Mo
             continue;
         }
 
-        if (color == &Color::W && !board.white_pieces.read_square(square))
-            | (color == &Color::B && !board.black_pieces.read_square(square))
+        if (color == &Color::WHITE && !board.colors[Color::WHITE].read_square(square))
+            | (color == &Color::BLACK && !board.colors[Color::WHITE].read_square(square))
         {
             destinations.push(Move::from_origin_and_destination(
                 &Square::new(new_bit as u8),
@@ -92,10 +92,10 @@ mod test_move_gen {
 
     #[test]
     fn test_get_white_pawn_moves() {
-        let bit = 8;
+        let bit = Square::new(8);
         let mut bb = BitBoard::zeros();
         bb.set_one(&bit);
-        let color = Color::W;
+        let color = Color::WHITE;
         let board = Board::default();
 
         let (moves, attacking_moves) = get_pawn_moves(bb, &bit, &board, color);
@@ -106,10 +106,10 @@ mod test_move_gen {
 
     #[test]
     fn test_get_black_pawn_moves() {
-        let bit = 49;
+        let bit = Square::new(49);
         let mut bb = BitBoard::zeros();
         bb.set_one(&bit);
-        let color = Color::B;
+        let color = Color::WHITE;
         let board = Board::default();
 
         let (moves, attacking_moves) = get_pawn_moves(bb, &bit, &board, color);

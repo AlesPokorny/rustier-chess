@@ -12,5 +12,5 @@ use crate::board::Board;
 fn main() {
     let a = Board::default();
 
-    println!("{}", a.white_pawns);
+    println!("{}", a);
 }

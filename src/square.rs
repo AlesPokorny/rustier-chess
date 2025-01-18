@@ -1,7 +1,13 @@
-use std::{fmt::Display, str::FromStr, string::ParseError};
+use std::{
+    fmt::Display,
+    ops::{Add, Sub},
+    str::FromStr,
+    string::ParseError,
+};
 
 pub struct Aaa;
 
+#[derive(PartialEq, Eq, Debug)]
 pub struct Square(u8);
 
 impl Square {
@@ -15,6 +21,14 @@ impl Square {
 
     pub fn as_u16(&self) -> u16 {
         self.0 as u16
+    }
+
+    pub fn sub(&self, rhs: u8) -> Self {
+        Self(self.0 - rhs)
+    }
+
+    pub fn add(&self, rhs: u8) -> Self {
+        Self(self.0 + rhs)
     }
 }
 
@@ -34,5 +48,21 @@ impl FromStr for Square {
 impl Display for Square {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl Add<u8> for Square {
+    type Output = Self;
+
+    fn add(self, rhs: u8) -> Self::Output {
+        Self(self.0 + rhs)
+    }
+}
+
+impl Sub<u8> for Square {
+    type Output = Self;
+
+    fn sub(self, rhs: u8) -> Self::Output {
+        Self(self.0 - rhs)
     }
 }

@@ -1,8 +1,8 @@
-use crate::{piece::PieceType, square::Square};
+use crate::square::Square;
 
 // bit 0..5     destination
 // bit 6..11    origin
-// bit 12..13   promotion piece (0 knight, 1 bishop, 2 rook, 3 queen)
+// bit 12..13   promotion piece (0 queen, 1 rook, 2 bishop, 3 knight)
 // bit 14       promotion flag
 // bit 15       en passant flag
 pub struct Move(u16);
@@ -32,12 +32,9 @@ impl Move {
         self.0 |= square.as_u16() << 5
     }
 
-    pub fn set_promotion(&mut self, piece_type: PieceType) {
+    pub fn set_promotion(&mut self, piece_type: usize) {
         let piece_value: u16 = match piece_type {
-            PieceType::Q => 4,
-            PieceType::R => 3,
-            PieceType::B => 2,
-            PieceType::N => 1,
+            (0..=3) => piece_type as u16,
             _ => panic!("Cannot promote to king nor pawn"),
         };
         self.0 |= piece_value << 12;
