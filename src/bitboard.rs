@@ -6,9 +6,11 @@ use std::{
     },
 };
 
+use serde_derive::{Deserialize, Serialize};
+
 use crate::square::Square;
 
-#[derive(Clone, Copy, Hash)]
+#[derive(Clone, Copy, Hash, Serialize, Deserialize)]
 pub struct BitBoard(u64);
 
 impl BitBoard {

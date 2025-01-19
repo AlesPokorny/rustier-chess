@@ -1,8 +1,16 @@
+use std::collections::HashMap;
+
 use crate::{bitboard::BitBoard, board::Board, piece::Color, square::Square};
 
-use super::moves_utils::Move;
+use bincode::{deserialize_from, serialize_into};
 
-pub fn get_pawn_moves(
+use std::fs::File;
+
+const MOVES_FOLDER_PATH: &str = "./src/moves/data/";
+const KING_MOVES_FILE: &str = "king.bin";
+const KNIGHT_MOVES_FILE: &str = "knight.bin";
+
+fn get_pawn_moves(
     pawn_position: BitBoard,
     square: &Square,
     board: &Board,
@@ -45,9 +53,9 @@ pub fn get_pawn_moves(
     (possible_positions, attacking_moves)
 }
 
-pub fn get_knight_moves(square: &Square, board: &Board, color: &usize) -> Vec<Move> {
+fn generate_knight_moves(square: &Square) -> BitBoard {
     let i8_bit = square.as_u8() as i8;
-    let bit_col = (square.as_u8() % 8) as i8;
+    let square_file = square.get_file() as i8;
     let pony_moves = [
         (-1, 2),
         (-1, -2),
@@ -59,32 +67,25 @@ pub fn get_knight_moves(square: &Square, board: &Board, color: &usize) -> Vec<Mo
         (2, -1),
     ];
 
-    let mut destinations: Vec<Move> = Vec::new();
+    let mut moves = BitBoard::zeros();
 
     for pony_move in pony_moves {
-        let new_col = bit_col + pony_move.0;
-        if (0..7).contains(&new_col) {
+        let new_file = square_file + pony_move.0;
+        if !(0..=7).contains(&new_file) {
             continue;
         }
         let new_bit = pony_move.0 + pony_move.1 * 8 + i8_bit;
-        if (0..=63).contains(&new_bit) {
+        if !(0..=63).contains(&new_bit) {
             continue;
         }
 
-        if (color == &Color::WHITE && !board.colors[Color::WHITE].read_square(square))
-            | (color == &Color::BLACK && !board.colors[Color::BLACK].read_square(square))
-        {
-            destinations.push(Move::from_origin_and_destination(
-                &Square::new(new_bit as u8),
-                square,
-            ));
-        }
+        moves.set_one(&Square::new(new_bit as u8));
     }
 
-    destinations
+    moves
 }
 
-pub fn get_king_moves(square: &Square, board: &Board, color: &usize) -> Vec<Move> {
+fn generate_king_moves(square: &Square) -> BitBoard {
     let king_row = square.get_row();
     let king_file = square.get_file();
     let is_king_on_first_row = king_row == 0;
@@ -94,31 +95,55 @@ pub fn get_king_moves(square: &Square, board: &Board, color: &usize) -> Vec<Move
 
     let directions: [i8; 8] = [1, 7, 8, 9, -1, -7, -8, -9];
 
-    let mut moves: Vec<Move> = Vec::new();
+    let mut moves = BitBoard::zeros();
 
     for direction in directions {
-        if is_king_on_first_file && [1, 7, -9].contains(&direction) {
+        if is_king_on_first_file && [-1, 7, -9].contains(&direction) {
             continue;
         }
-        if is_king_on_last_file && [-1, -7, 9].contains(&direction) {
+        if is_king_on_last_file && [1, -7, 9].contains(&direction) {
             continue;
         }
-        if is_king_on_first_row && (7..=9).contains(&direction) {
+        if is_king_on_first_row && (-9..=-7).contains(&direction) {
             continue;
         }
-        if is_king_on_last_row && (-9..=-7).contains(&direction) {
+        if is_king_on_last_row && (7..=9).contains(&direction) {
             continue;
         }
 
-        let new_square = *square << -3_i8;
+        moves.set_one(&(*square + direction));
+    }
+    moves
+}
 
-        if !board.colors[*color].read_square(&new_square) {
-            let new_move = Move::from_origin_and_destination(&new_square, square);
-            moves.push(new_move)
-        };
+pub fn generate_moves() {
+    let mut king_moves: HashMap<Square, BitBoard> = HashMap::with_capacity(64);
+    let mut knight_moves: HashMap<Square, BitBoard> = HashMap::with_capacity(64);
+    for i in 0..63 {
+        let square = Square::new(i);
+
+        let king_bb = generate_king_moves(&square);
+        king_moves.insert(square, king_bb);
+
+        let knight_bb = generate_knight_moves(&square);
+        knight_moves.insert(square, knight_bb);
+
+        println!("{}", knight_bb);
     }
 
-    moves
+    save_file(KING_MOVES_FILE, king_moves);
+    save_file(KNIGHT_MOVES_FILE, knight_moves);
+}
+
+pub fn save_file(file_name: &str, moves: HashMap<Square, BitBoard>) {
+    let file = File::create(format!("{}{}", MOVES_FOLDER_PATH, file_name)).unwrap();
+    serialize_into(file, &moves).unwrap();
+}
+
+pub fn read_moves() {
+    let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, KING_MOVES_FILE)).unwrap();
+    let a = deserialize_from::<&mut File, HashMap<Square, BitBoard>>(&mut reader).unwrap();
+    println!("{}", a.get(&Square::new(2)).unwrap());
 }
 
 #[cfg(test)]

@@ -5,9 +5,10 @@ use std::{
     string::ParseError,
 };
 
+use serde_derive::{Deserialize, Serialize};
 pub struct Aaa;
 
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Hash, Deserialize, Serialize)]
 pub struct Square(u8);
 
 impl Square {
@@ -108,5 +109,18 @@ impl Shr<i8> for Square {
 
     fn shr(self, rhs: i8) -> Self::Output {
         Self(self.0 >> rhs)
+    }
+}
+
+impl Add<i8> for Square {
+    type Output = Self;
+
+    fn add(self, rhs: i8) -> Self::Output {
+        let int = self.0 as i8;
+        if rhs < 0 && rhs.abs() > int {
+            panic!("Boomsies")
+        }
+
+        Self((int + rhs) as u8)
     }
 }
