@@ -6,6 +6,7 @@ mod game;
 mod moves;
 mod piece;
 mod square;
+mod state;
 
 use crate::board::Board;
 

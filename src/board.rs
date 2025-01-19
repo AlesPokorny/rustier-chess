@@ -1,10 +1,11 @@
 use std::fmt;
 
-use crate::{bitboard::BitBoard, piece::Piece, square::Square};
+use crate::{bitboard::BitBoard, piece::Piece, square::Square, state::State};
 
 pub struct Board {
     pub colors: [BitBoard; 2],
     pub pieces: [[BitBoard; 6]; 2],
+    pub state: State,
 }
 
 impl Board {
@@ -58,6 +59,7 @@ impl Board {
                     BitBoard::zeros(),
                 ],
             ],
+            state: State::default(),
         }
     }
 }
@@ -84,6 +86,7 @@ impl Default for Board {
                     BitBoard::new(0x1000000000000000), // king
                 ],
             ],
+            state: State::default(),
         }
     }
 }
