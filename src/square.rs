@@ -6,7 +6,6 @@ use std::{
 };
 
 use serde_derive::{Deserialize, Serialize};
-pub struct Aaa;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Hash, Deserialize, Serialize)]
 pub struct Square(u8);
@@ -22,6 +21,10 @@ impl Square {
 
     pub fn as_u16(&self) -> u16 {
         self.0 as u16
+    }
+
+    pub fn as_u64(&self) -> u64 {
+        self.0 as u64
     }
 
     pub fn sub(&self, rhs: u8) -> Self {

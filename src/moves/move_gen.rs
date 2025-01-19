@@ -9,6 +9,7 @@ use std::fs::File;
 const MOVES_FOLDER_PATH: &str = "./src/moves/data/";
 const KING_MOVES_FILE: &str = "king.bin";
 const KNIGHT_MOVES_FILE: &str = "knight.bin";
+const ROOK_MOVES_FILE: &str = "rook.bin";
 
 fn get_pawn_moves(
     pawn_position: BitBoard,
@@ -116,9 +117,109 @@ fn generate_king_moves(square: &Square) -> BitBoard {
     moves
 }
 
+fn generate_rook_moves_mask(square: &Square) -> BitBoard {
+    let file = square.get_file();
+    let row = square.get_row();
+
+    let mut sliding_move_bb = BitBoard::zeros();
+
+    for i in 0..8_u8 {
+        if i != file {
+            sliding_move_bb.set_one(&Square::new(row * 8 + i));
+        }
+
+        if i != row {
+            sliding_move_bb.set_one(&Square::new(i * 8 + file));
+        }
+    }
+    sliding_move_bb
+}
+
+// TODO: This needs magic
+fn generate_rook_moves(square: &Square) -> HashMap<BitBoard, BitBoard> {
+    let full_mask = generate_rook_moves_mask(square);
+
+    let blockers_mask = create_blocker_boards(&full_mask);
+    let legal_moves_mask = get_rook_legal_moves_from_blockers(square, &full_mask, &blockers_mask);
+
+    let mut output: HashMap<BitBoard, BitBoard> = HashMap::with_capacity(blockers_mask.len());
+
+    for (blockers, legal_moves) in blockers_mask.into_iter().zip(legal_moves_mask) {
+        output.insert(blockers, legal_moves);
+    }
+    output
+}
+
+/// TODO: This function needs to be cleaned up
+fn get_rook_legal_moves_from_blockers(
+    square: &Square,
+    bitboard: &BitBoard,
+    blockers: &[BitBoard],
+) -> Vec<BitBoard> {
+    let mut legal_moves_vec: Vec<BitBoard> = Vec::with_capacity(blockers.len());
+    let starting_row = square.get_row() as i8;
+    let starting_file = square.get_file() as i8;
+
+    for blocker_board in blockers.iter() {
+        let mut new_bitboard = *bitboard;
+
+        for direction in [-1, 1] {
+            let mut file_blocked = false;
+            let mut row_blocked = false;
+
+            for distance in 1_i8..8 {
+                let offset = direction * distance;
+                let new_row = starting_row + offset;
+                let new_file = starting_file + offset;
+
+                if (0..8).contains(&new_row) {
+                    let new_square = Square::new((new_row * 8 + starting_file) as u8);
+                    if row_blocked {
+                        new_bitboard.set_zero(&new_square);
+                    }
+                    if blocker_board.read_square(&new_square) {
+                        row_blocked = true;
+                    };
+                }
+
+                if (0..8).contains(&new_file) {
+                    let new_square = Square::new((starting_row * 8 + new_file) as u8);
+                    if file_blocked {
+                        new_bitboard.set_zero(&new_square);
+                    }
+                    if blocker_board.read_square(&new_square) {
+                        file_blocked = true;
+                    };
+                }
+            }
+        }
+        legal_moves_vec.push(new_bitboard);
+    }
+
+    legal_moves_vec
+}
+
+fn create_blocker_boards(bitboard: &BitBoard) -> Vec<BitBoard> {
+    let set_bits_indices = bitboard.get_ones();
+    let n_patterns = 1 << set_bits_indices.len(); // 2^n
+    let mut blocker_boards: Vec<BitBoard> = Vec::with_capacity(n_patterns);
+
+    for pattern_i in 0..n_patterns {
+        let mut new_bitboard = BitBoard::zeros();
+        for (bit_i, new_square) in set_bits_indices.iter().enumerate() {
+            let bit = ((pattern_i >> bit_i) & 1) as u64;
+            new_bitboard |= BitBoard::new(bit << new_square.as_u64());
+        }
+
+        blocker_boards.push(new_bitboard);
+    }
+    blocker_boards
+}
+
 pub fn generate_moves() {
     let mut king_moves: HashMap<Square, BitBoard> = HashMap::with_capacity(64);
     let mut knight_moves: HashMap<Square, BitBoard> = HashMap::with_capacity(64);
+    let mut rook_moves: HashMap<Square, HashMap<BitBoard, BitBoard>> = HashMap::with_capacity(64);
     for i in 0..63 {
         let square = Square::new(i);
 
@@ -128,14 +229,16 @@ pub fn generate_moves() {
         let knight_bb = generate_knight_moves(&square);
         knight_moves.insert(square, knight_bb);
 
-        println!("{}", knight_bb);
+        let rook_mapping = generate_rook_moves(&square);
+        rook_moves.insert(square, rook_mapping);
     }
 
-    save_file(KING_MOVES_FILE, king_moves);
-    save_file(KNIGHT_MOVES_FILE, knight_moves);
+    save_move_file(KING_MOVES_FILE, king_moves);
+    save_move_file(KNIGHT_MOVES_FILE, knight_moves);
+    save_sliding_move_file(ROOK_MOVES_FILE, rook_moves);
 }
 
-pub fn save_file(file_name: &str, moves: HashMap<Square, BitBoard>) {
+pub fn save_move_file(file_name: &str, moves: HashMap<Square, BitBoard>) {
     let file = File::create(format!("{}{}", MOVES_FOLDER_PATH, file_name)).unwrap();
     serialize_into(file, &moves).unwrap();
 }
@@ -144,6 +247,21 @@ pub fn read_moves() {
     let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, KING_MOVES_FILE)).unwrap();
     let a = deserialize_from::<&mut File, HashMap<Square, BitBoard>>(&mut reader).unwrap();
     println!("{}", a.get(&Square::new(2)).unwrap());
+}
+
+pub fn save_sliding_move_file(
+    file_name: &str,
+    moves: HashMap<Square, HashMap<BitBoard, BitBoard>>,
+) {
+    let file = File::create(format!("{}{}", MOVES_FOLDER_PATH, file_name)).unwrap();
+    serialize_into(file, &moves).unwrap();
+}
+
+pub fn read_sliding_moves() {
+    let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, KING_MOVES_FILE)).unwrap();
+    let _ =
+        deserialize_from::<&mut File, HashMap<Square, HashMap<BitBoard, BitBoard>>>(&mut reader)
+            .unwrap();
 }
 
 #[cfg(test)]
