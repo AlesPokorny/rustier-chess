@@ -1,13 +1,13 @@
 use std::{
     fmt::Display,
-    ops::{Add, Sub},
+    ops::{Add, Shl, Shr, Sub},
     str::FromStr,
     string::ParseError,
 };
 
 pub struct Aaa;
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Square(u8);
 
 impl Square {
@@ -37,6 +37,10 @@ impl Square {
 
     pub fn get_file(&self) -> u8 {
         self.0 % 8
+    }
+
+    pub fn get_bit_number(&self) -> u8 {
+        self.0.trailing_zeros() as u8
     }
 }
 
@@ -72,5 +76,37 @@ impl Sub<u8> for Square {
 
     fn sub(self, rhs: u8) -> Self::Output {
         Self(self.0 - rhs)
+    }
+}
+
+impl Shl<u8> for Square {
+    type Output = Self;
+
+    fn shl(self, rhs: u8) -> Self::Output {
+        Self(self.0 << rhs)
+    }
+}
+
+impl Shr<u8> for Square {
+    type Output = Self;
+
+    fn shr(self, rhs: u8) -> Self::Output {
+        Self(self.0 >> rhs)
+    }
+}
+
+impl Shl<i8> for Square {
+    type Output = Self;
+
+    fn shl(self, rhs: i8) -> Self::Output {
+        Self(self.0 << rhs)
+    }
+}
+
+impl Shr<i8> for Square {
+    type Output = Self;
+
+    fn shr(self, rhs: i8) -> Self::Output {
+        Self(self.0 >> rhs)
     }
 }

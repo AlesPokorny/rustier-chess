@@ -84,6 +84,43 @@ pub fn get_knight_moves(square: &Square, board: &Board, color: &usize) -> Vec<Mo
     destinations
 }
 
+pub fn get_king_moves(square: &Square, board: &Board, color: &usize) -> Vec<Move> {
+    let king_row = square.get_row();
+    let king_file = square.get_file();
+    let is_king_on_first_row = king_row == 0;
+    let is_king_on_last_row = king_row == 7;
+    let is_king_on_first_file = king_file == 0;
+    let is_king_on_last_file = king_file == 7;
+
+    let directions: [i8; 8] = [1, 7, 8, 9, -1, -7, -8, -9];
+
+    let mut moves: Vec<Move> = Vec::new();
+
+    for direction in directions {
+        if is_king_on_first_file && [1, 7, -9].contains(&direction) {
+            continue;
+        }
+        if is_king_on_last_file && [-1, -7, 9].contains(&direction) {
+            continue;
+        }
+        if is_king_on_first_row && (7..=9).contains(&direction) {
+            continue;
+        }
+        if is_king_on_last_row && (-9..=-7).contains(&direction) {
+            continue;
+        }
+
+        let new_square = *square << -3_i8;
+
+        if !board.colors[*color].read_square(&new_square) {
+            let new_move = Move::from_origin_and_destination(&new_square, square);
+            moves.push(new_move)
+        };
+    }
+
+    moves
+}
+
 #[cfg(test)]
 mod test_move_gen {
     use crate::{bitboard::BitBoard, board::Board, piece::Color};
