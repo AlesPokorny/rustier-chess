@@ -43,7 +43,7 @@ impl Square {
         self.0 % 8
     }
 
-    pub fn get_bit_number(&self) -> u8 {
+    pub fn get_bit_index(&self) -> u8 {
         self.0.trailing_zeros() as u8
     }
 }

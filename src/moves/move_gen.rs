@@ -1,6 +1,11 @@
 use std::collections::HashMap;
 
-use crate::{bitboard::BitBoard, board::Board, piece::Color, square::Square};
+use crate::{
+    bitboard::BitBoard,
+    board::Board,
+    piece::{Color, Pieces},
+    square::Square,
+};
 
 use bincode::{deserialize_from, serialize_into};
 
@@ -10,6 +15,7 @@ const MOVES_FOLDER_PATH: &str = "./src/moves/data/";
 const KING_MOVES_FILE: &str = "king.bin";
 const KNIGHT_MOVES_FILE: &str = "knight.bin";
 const ROOK_MOVES_FILE: &str = "rook.bin";
+const BISHOP_MOVES_FILE: &str = "bishop.bin";
 
 fn get_pawn_moves(
     pawn_position: BitBoard,
@@ -140,7 +146,8 @@ fn generate_rook_moves(square: &Square) -> HashMap<BitBoard, BitBoard> {
     let full_mask = generate_rook_moves_mask(square);
 
     let blockers_mask = create_blocker_boards(&full_mask);
-    let legal_moves_mask = get_rook_legal_moves_from_blockers(square, &full_mask, &blockers_mask);
+    let legal_moves_mask =
+        generate_slider_moves_from_blockers(square, &blockers_mask, Pieces::ROOK);
 
     let mut output: HashMap<BitBoard, BitBoard> = HashMap::with_capacity(blockers_mask.len());
 
@@ -150,53 +157,116 @@ fn generate_rook_moves(square: &Square) -> HashMap<BitBoard, BitBoard> {
     output
 }
 
-/// TODO: This function needs to be cleaned up
-fn get_rook_legal_moves_from_blockers(
+fn generate_bishop_moves(square: &Square) -> HashMap<BitBoard, BitBoard> {
+    let all_move_mask = generate_bishop_move_mask(square);
+    let blockers = create_blocker_boards(&all_move_mask);
+    let legal_moves = generate_slider_moves_from_blockers(square, &blockers, Pieces::BISHOP);
+
+    let mut output: HashMap<BitBoard, BitBoard> = HashMap::with_capacity(blockers.len());
+
+    for (blockers, legal_moves) in blockers.into_iter().zip(legal_moves) {
+        output.insert(blockers, legal_moves);
+    }
+    output
+}
+
+fn generate_slider_moves_from_blockers(
     square: &Square,
-    bitboard: &BitBoard,
     blockers: &[BitBoard],
+    piece: usize,
 ) -> Vec<BitBoard> {
+    let directions: [(i8, i8); 4] = match piece {
+        Pieces::ROOK => [(-1, 0), (1, 0), (0, 1), (0, -1)],
+        Pieces::BISHOP => [(-1, -1), (1, 1), (1, -1), (-1, 1)],
+        _ => panic!("Wrong piece"),
+    };
+
     let mut legal_moves_vec: Vec<BitBoard> = Vec::with_capacity(blockers.len());
-    let starting_row = square.get_row() as i8;
-    let starting_file = square.get_file() as i8;
+    let file = square.get_file() as i8;
+    let row = square.get_row() as i8;
+    let max_step = [row, file, 7 - row, 7 - file].into_iter().max().unwrap();
 
-    for blocker_board in blockers.iter() {
-        let mut new_bitboard = *bitboard;
+    for blocker in blockers {
+        let mut legal_moves = BitBoard::zeros();
+        for direction in directions {
+            for step in 1..=max_step {
+                let new_row = row + step * direction.0;
+                let new_file = file + step * direction.1;
 
-        for direction in [-1, 1] {
-            let mut file_blocked = false;
-            let mut row_blocked = false;
-
-            for distance in 1_i8..8 {
-                let offset = direction * distance;
-                let new_row = starting_row + offset;
-                let new_file = starting_file + offset;
-
-                if (0..8).contains(&new_row) {
-                    let new_square = Square::new((new_row * 8 + starting_file) as u8);
-                    if row_blocked {
-                        new_bitboard.set_zero(&new_square);
-                    }
-                    if blocker_board.read_square(&new_square) {
-                        row_blocked = true;
-                    };
+                if !(0..8).contains(&new_row) | !(0..8).contains(&new_file) {
+                    break;
                 }
 
-                if (0..8).contains(&new_file) {
-                    let new_square = Square::new((starting_row * 8 + new_file) as u8);
-                    if file_blocked {
-                        new_bitboard.set_zero(&new_square);
-                    }
-                    if blocker_board.read_square(&new_square) {
-                        file_blocked = true;
-                    };
+                let new_square = Square::new((new_row * 8 + new_file) as u8);
+                legal_moves.set_one(&new_square);
+
+                if blocker.read_square(&new_square) {
+                    break;
                 }
             }
         }
-        legal_moves_vec.push(new_bitboard);
+        legal_moves_vec.push(legal_moves);
     }
 
     legal_moves_vec
+}
+
+fn generate_bishop_legal_moves_from_blockers(
+    square: &Square,
+    blockers: &[BitBoard],
+) -> Vec<BitBoard> {
+    let mut legal_moves_vec: Vec<BitBoard> = Vec::with_capacity(blockers.len());
+    let file = square.get_file() as i8;
+    let row = square.get_row() as i8;
+    let directions: [(i8, i8); 4] = [(-1, -1), (1, 1), (1, -1), (-1, 1)];
+    let max_step = [row, file, 7 - row, 7 - file].into_iter().max().unwrap();
+
+    for blocker in blockers {
+        let mut legal_moves = BitBoard::zeros();
+        for direction in directions {
+            for step in 1..=max_step {
+                let new_row = row + step * direction.0;
+                let new_file = file + step * direction.1;
+
+                if !(0..8).contains(&new_row) | !(0..8).contains(&new_file) {
+                    break;
+                }
+
+                let new_square = Square::new((new_row * 8 + new_file) as u8);
+                legal_moves.set_one(&new_square);
+
+                if blocker.read_square(&new_square) {
+                    break;
+                }
+            }
+        }
+        legal_moves_vec.push(legal_moves);
+    }
+
+    legal_moves_vec
+}
+
+fn generate_bishop_move_mask(square: &Square) -> BitBoard {
+    let file = square.get_file() as i8;
+    let row = square.get_row() as i8;
+    let directions: [(i8, i8); 4] = [(-1, -1), (1, 1), (1, -1), (-1, 1)];
+    let max_step = [row, file, 7 - row, 7 - file].into_iter().max().unwrap();
+
+    let mut sliding_move_bb = BitBoard::zeros();
+
+    for direction in directions {
+        for step in 1..=max_step {
+            let new_row = row + step * direction.0;
+            let new_file = file + step * direction.1;
+
+            if !(0..8).contains(&new_row) | !(0..8).contains(&new_file) {
+                break;
+            }
+            sliding_move_bb.set_one(&Square::new((new_row * 8 + new_file) as u8));
+        }
+    }
+
+    sliding_move_bb
 }
 
 fn create_blocker_boards(bitboard: &BitBoard) -> Vec<BitBoard> {
@@ -220,6 +290,7 @@ pub fn generate_moves() {
     let mut king_moves: HashMap<Square, BitBoard> = HashMap::with_capacity(64);
     let mut knight_moves: HashMap<Square, BitBoard> = HashMap::with_capacity(64);
     let mut rook_moves: HashMap<Square, HashMap<BitBoard, BitBoard>> = HashMap::with_capacity(64);
+    let mut bishop_moves: HashMap<Square, HashMap<BitBoard, BitBoard>> = HashMap::with_capacity(64);
     for i in 0..63 {
         let square = Square::new(i);
 
@@ -231,11 +302,15 @@ pub fn generate_moves() {
 
         let rook_mapping = generate_rook_moves(&square);
         rook_moves.insert(square, rook_mapping);
+
+        let bishop_mapping = generate_bishop_moves(&square);
+        bishop_moves.insert(square, bishop_mapping);
     }
 
     save_move_file(KING_MOVES_FILE, king_moves);
     save_move_file(KNIGHT_MOVES_FILE, knight_moves);
     save_sliding_move_file(ROOK_MOVES_FILE, rook_moves);
+    save_sliding_move_file(BISHOP_MOVES_FILE, bishop_moves);
 }
 
 pub fn save_move_file(file_name: &str, moves: HashMap<Square, BitBoard>) {
@@ -297,5 +372,23 @@ mod test_move_gen {
         assert_eq!(attacking_moves.as_u64(), 0);
         println!("{}", moves);
         assert_eq!(moves.as_u64(), 0b100000001000000000000000000000000000000000);
+    }
+
+    #[test]
+    fn test_generate_bishop_move_mask() {
+        let square = Square::new(30);
+        assert_eq!(
+            generate_bishop_move_mask(&square).as_u64(),
+            0x40810a000a01008
+        );
+    }
+
+    #[test]
+    fn test_generate_rook_move_mask() {
+        let square = Square::new(30);
+        assert_eq!(
+            generate_rook_moves_mask(&square).as_u64(),
+            0x40404040bf404040
+        );
     }
 }
