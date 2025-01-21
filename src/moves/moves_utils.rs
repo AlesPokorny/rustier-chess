@@ -1,10 +1,10 @@
 use crate::square::Square;
 
-// bit 0..5     destination
-// bit 6..11    origin
-// bit 12..13   promotion piece (0 queen, 1 rook, 2 bishop, 3 knight)
-// bit 14       promotion flag
-// bit 15       en passant flag
+#[derive(PartialEq, Eq, Debug)]
+/// bit 0..5     destination
+/// bit 6..11    origin
+/// bit 12..13   promotion piece (0 queen, 1 rook, 2 bishop, 3 knight)
+/// bit 14..15   1 - promotion flag, 2 en passant, 3 castling
 pub struct Move(u16);
 
 impl Move {

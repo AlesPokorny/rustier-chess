@@ -62,6 +62,10 @@ impl Board {
             state: State::default(),
         }
     }
+
+    pub fn check_en_passant(&self, square: &Square) -> bool {
+        self.state.en_passant.is_some_and(|x| &x == square)
+    }
 }
 
 impl Default for Board {

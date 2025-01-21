@@ -8,7 +8,7 @@ mod piece;
 mod square;
 mod state;
 
-use moves::move_gen::generate_moves;
+use moves::move_mask_gen::generate_moves;
 
 use crate::board::Board;
 

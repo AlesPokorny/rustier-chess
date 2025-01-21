@@ -35,7 +35,7 @@ impl Square {
         Self(self.0 + rhs)
     }
 
-    pub fn get_row(&self) -> u8 {
+    pub fn get_rank(&self) -> u8 {
         self.0 / 8
     }
 

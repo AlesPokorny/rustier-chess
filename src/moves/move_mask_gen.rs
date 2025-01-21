@@ -1,11 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{
-    bitboard::BitBoard,
-    board::Board,
-    piece::{Color, Pieces},
-    square::Square,
-};
+use crate::{bitboard::BitBoard, piece::Pieces, square::Square};
 
 use bincode::{deserialize_from, serialize_into};
 
@@ -16,49 +11,6 @@ const KING_MOVES_FILE: &str = "king.bin";
 const KNIGHT_MOVES_FILE: &str = "knight.bin";
 const ROOK_MOVES_FILE: &str = "rook.bin";
 const BISHOP_MOVES_FILE: &str = "bishop.bin";
-
-fn get_pawn_moves(
-    pawn_position: BitBoard,
-    square: &Square,
-    board: &Board,
-    color: usize,
-) -> (BitBoard, BitBoard) {
-    let mut possible_positions;
-    let not_all_pieces = !(board.colors[0] & board.colors[1]);
-
-    let mut attacking_moves: BitBoard;
-    if color == Color::WHITE {
-        possible_positions = pawn_position << 8;
-        possible_positions &= not_all_pieces;
-        if (8..16).contains(&square.as_u8()) && possible_positions.as_u64() != 0 {
-            possible_positions.set_one(&(square.add(16)));
-            possible_positions &= not_all_pieces;
-        }
-
-        // Attacking moves
-        attacking_moves = match square.get_file() {
-            0 => pawn_position << 9,
-            7 => pawn_position << 7,
-            _ => pawn_position << 7 | pawn_position << 9,
-        };
-        attacking_moves &= board.colors[Color::BLACK];
-    } else {
-        possible_positions = pawn_position >> 8;
-        if (48..56).contains(&square.as_u8()) && possible_positions.as_u64() != 0 {
-            possible_positions.set_one(&(square.sub(16)));
-            possible_positions &= not_all_pieces;
-        }
-
-        // Attacking moves
-        attacking_moves = match square.get_file() {
-            0 => pawn_position >> 7,
-            7 => pawn_position >> 9,
-            _ => pawn_position >> 7 | pawn_position >> 9,
-        };
-        attacking_moves &= board.colors[Color::WHITE];
-    }
-    (possible_positions, attacking_moves)
-}
 
 fn generate_knight_moves(square: &Square) -> BitBoard {
     let i8_bit = square.as_u8() as i8;
@@ -93,7 +45,7 @@ fn generate_knight_moves(square: &Square) -> BitBoard {
 }
 
 fn generate_king_moves(square: &Square) -> BitBoard {
-    let king_row = square.get_row();
+    let king_row = square.get_rank();
     let king_file = square.get_file();
     let is_king_on_first_row = king_row == 0;
     let is_king_on_last_row = king_row == 7;
@@ -125,7 +77,7 @@ fn generate_king_moves(square: &Square) -> BitBoard {
 
 fn generate_rook_moves_mask(square: &Square) -> BitBoard {
     let file = square.get_file();
-    let row = square.get_row();
+    let row = square.get_rank();
 
     let mut sliding_move_bb = BitBoard::zeros();
 
@@ -183,7 +135,7 @@ fn generate_slider_moves_from_blockers(
 
     let mut legal_moves_vec: Vec<BitBoard> = Vec::with_capacity(blockers.len());
     let file = square.get_file() as i8;
-    let row = square.get_row() as i8;
+    let row = square.get_rank() as i8;
     let max_step = [row, file, 7 - row, 7 - file].into_iter().max().unwrap();
 
     for blocker in blockers {
@@ -217,7 +169,7 @@ fn generate_bishop_legal_moves_from_blockers(
 ) -> Vec<BitBoard> {
     let mut legal_moves_vec: Vec<BitBoard> = Vec::with_capacity(blockers.len());
     let file = square.get_file() as i8;
-    let row = square.get_row() as i8;
+    let row = square.get_rank() as i8;
     let directions: [(i8, i8); 4] = [(-1, -1), (1, 1), (1, -1), (-1, 1)];
     let max_step = [row, file, 7 - row, 7 - file].into_iter().max().unwrap();
 
@@ -248,7 +200,7 @@ fn generate_bishop_legal_moves_from_blockers(
 
 fn generate_bishop_move_mask(square: &Square) -> BitBoard {
     let file = square.get_file() as i8;
-    let row = square.get_row() as i8;
+    let row = square.get_rank() as i8;
     let directions: [(i8, i8); 4] = [(-1, -1), (1, 1), (1, -1), (-1, 1)];
     let max_step = [row, file, 7 - row, 7 - file].into_iter().max().unwrap();
 
@@ -287,24 +239,24 @@ fn create_blocker_boards(bitboard: &BitBoard) -> Vec<BitBoard> {
 }
 
 pub fn generate_moves() {
-    let mut king_moves: HashMap<Square, BitBoard> = HashMap::with_capacity(64);
-    let mut knight_moves: HashMap<Square, BitBoard> = HashMap::with_capacity(64);
-    let mut rook_moves: HashMap<Square, HashMap<BitBoard, BitBoard>> = HashMap::with_capacity(64);
-    let mut bishop_moves: HashMap<Square, HashMap<BitBoard, BitBoard>> = HashMap::with_capacity(64);
+    let mut king_moves: Vec<BitBoard> = Vec::with_capacity(64);
+    let mut knight_moves: Vec<BitBoard> = Vec::with_capacity(64);
+    let mut rook_moves: Vec<HashMap<BitBoard, BitBoard>> = Vec::with_capacity(64);
+    let mut bishop_moves: Vec<HashMap<BitBoard, BitBoard>> = Vec::with_capacity(64);
     for i in 0..63 {
         let square = Square::new(i);
 
         let king_bb = generate_king_moves(&square);
-        king_moves.insert(square, king_bb);
+        king_moves.push(king_bb);
 
         let knight_bb = generate_knight_moves(&square);
-        knight_moves.insert(square, knight_bb);
+        knight_moves.push(knight_bb);
 
         let rook_mapping = generate_rook_moves(&square);
-        rook_moves.insert(square, rook_mapping);
+        rook_moves.push(rook_mapping);
 
         let bishop_mapping = generate_bishop_moves(&square);
-        bishop_moves.insert(square, bishop_mapping);
+        bishop_moves.push(bishop_mapping);
     }
 
     save_move_file(KING_MOVES_FILE, king_moves);
@@ -313,66 +265,30 @@ pub fn generate_moves() {
     save_sliding_move_file(BISHOP_MOVES_FILE, bishop_moves);
 }
 
-pub fn save_move_file(file_name: &str, moves: HashMap<Square, BitBoard>) {
+pub fn save_move_file(file_name: &str, moves: Vec<BitBoard>) {
     let file = File::create(format!("{}{}", MOVES_FOLDER_PATH, file_name)).unwrap();
     serialize_into(file, &moves).unwrap();
 }
 
 pub fn read_moves() {
     let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, KING_MOVES_FILE)).unwrap();
-    let a = deserialize_from::<&mut File, HashMap<Square, BitBoard>>(&mut reader).unwrap();
-    println!("{}", a.get(&Square::new(2)).unwrap());
+    let a = deserialize_from::<&mut File, Vec<BitBoard>>(&mut reader).unwrap();
+    println!("{}", a[2]);
 }
 
-pub fn save_sliding_move_file(
-    file_name: &str,
-    moves: HashMap<Square, HashMap<BitBoard, BitBoard>>,
-) {
+pub fn save_sliding_move_file(file_name: &str, moves: Vec<HashMap<BitBoard, BitBoard>>) {
     let file = File::create(format!("{}{}", MOVES_FOLDER_PATH, file_name)).unwrap();
     serialize_into(file, &moves).unwrap();
 }
 
 pub fn read_sliding_moves() {
     let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, KING_MOVES_FILE)).unwrap();
-    let _ =
-        deserialize_from::<&mut File, HashMap<Square, HashMap<BitBoard, BitBoard>>>(&mut reader)
-            .unwrap();
+    let _ = deserialize_from::<&mut File, Vec<HashMap<BitBoard, BitBoard>>>(&mut reader).unwrap();
 }
 
 #[cfg(test)]
 mod test_move_gen {
-    use crate::{bitboard::BitBoard, board::Board, piece::Color};
-
     use super::*;
-
-    #[test]
-    fn test_get_white_pawn_moves() {
-        let bit = Square::new(8);
-        let mut bb = BitBoard::zeros();
-        bb.set_one(&bit);
-        let color = Color::WHITE;
-        let board = Board::default();
-
-        let (moves, attacking_moves) = get_pawn_moves(bb, &bit, &board, color);
-
-        assert_eq!(attacking_moves.as_u64(), 0);
-        assert_eq!(moves.as_u64(), 0b1000000010000000000000000);
-    }
-
-    #[test]
-    fn test_get_black_pawn_moves() {
-        let bit = Square::new(49);
-        let mut bb = BitBoard::zeros();
-        bb.set_one(&bit);
-        let color = Color::WHITE;
-        let board = Board::default();
-
-        let (moves, attacking_moves) = get_pawn_moves(bb, &bit, &board, color);
-
-        assert_eq!(attacking_moves.as_u64(), 0);
-        println!("{}", moves);
-        assert_eq!(moves.as_u64(), 0b100000001000000000000000000000000000000000);
-    }
 
     #[test]
     fn test_generate_bishop_move_mask() {
