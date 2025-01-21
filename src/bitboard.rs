@@ -234,12 +234,12 @@ mod test_bitboard {
     fn test_get_zeros() {
         let bitboard = BitBoard::new(5);
 
-        let ones = bitboard.get_zeros();
+        let zeros = bitboard.get_zeros();
         let expected_result: Vec<Square> = (0..64)
-            .filter(|x| ![2].contains(x))
+            .filter(|x| ![0, 2].contains(x))
             .map(|x| Square::new(x))
             .collect();
 
-        assert_eq!(ones, expected_result);
+        assert_eq!(zeros, expected_result);
     }
 }
