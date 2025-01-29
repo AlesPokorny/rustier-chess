@@ -5,6 +5,7 @@ use crate::{bitboard::BitBoard, piece::Piece, square::Square, state::State};
 pub struct Board {
     pub colors: [BitBoard; 2],
     pub pieces: [[BitBoard; 6]; 2],
+    pub all_pieces: BitBoard,
     pub state: State,
 }
 
@@ -59,6 +60,7 @@ impl Board {
                     BitBoard::zeros(),
                 ],
             ],
+            all_pieces: BitBoard::zeros(),
             state: State::default(),
         }
     }
@@ -90,6 +92,7 @@ impl Default for Board {
                     BitBoard::new(0x1000000000000000), // king
                 ],
             ],
+            all_pieces: BitBoard::new(0xFFFF00000000FFFF),
             state: State::default(),
         }
     }

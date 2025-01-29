@@ -27,6 +27,10 @@ impl Square {
         self.0 as u64
     }
 
+    pub fn as_usize(&self) -> usize {
+        self.0 as usize
+    }
+
     pub fn sub(&self, rhs: u8) -> Self {
         Self(self.0 - rhs)
     }
@@ -63,7 +67,12 @@ impl FromStr for Square {
 
 impl Display for Square {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        let file = (self.get_file() + 97) as char;
+        let row = char::from_digit((self.get_rank() + 1) as u32, 10).unwrap();
+
+        write!(f, "{}{}", file, row)?;
+
+        Ok(())
     }
 }
 

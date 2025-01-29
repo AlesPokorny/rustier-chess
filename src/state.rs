@@ -86,6 +86,14 @@ impl State {
         self.turn = if self.turn == 0 { 1 } else { 0 };
     }
 
+    pub fn opponent_turn(&self) -> usize {
+        if self.turn == 0 {
+            1
+        } else {
+            0
+        }
+    }
+
     pub fn remove_castling_rights(&mut self, color: usize, side: usize) {
         self.castling.set_zero((color | (side << 1)) as u8);
     }

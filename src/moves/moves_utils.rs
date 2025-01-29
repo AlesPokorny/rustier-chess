@@ -1,11 +1,13 @@
+use std::fmt;
+
 use crate::square::Square;
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq)]
 /// bit 0..5     destination
 /// bit 6..11    origin
 /// bit 12..13   promotion piece (0 queen, 1 rook, 2 bishop, 3 knight)
 /// bit 14..15   1 - promotion flag, 2 en passant, 3 castling
-pub struct Move(u16);
+pub struct Move(pub u16);
 
 impl Move {
     pub fn new() -> Self {
@@ -43,5 +45,33 @@ impl Move {
 
     pub fn set_en_passant(&mut self) {
         self.0 |= 1 << 15;
+    }
+
+    pub fn get_destination(&self) -> Square {
+        Square::new((self.0 & 0b11111) as u8)
+    }
+
+    pub fn get_origin(&self) -> Square {
+        Square::new(((self.0 & 0b1111100000) >> 5) as u8)
+    }
+}
+
+impl fmt::Display for Move {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let origin = self.get_origin();
+        let destination = self.get_destination();
+        writeln!(f, "from: {}, to: {}", origin, destination)?;
+
+        Ok(())
+    }
+}
+
+impl fmt::Debug for Move {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let origin = self.get_origin();
+        let destination = self.get_destination();
+        write!(f, "from: {}, to: {}", origin, destination)?;
+
+        Ok(())
     }
 }

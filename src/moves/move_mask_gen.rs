@@ -6,6 +6,44 @@ use bincode::{deserialize_from, serialize_into};
 
 use std::fs::File;
 
+pub struct MoveGenMasks {
+    pub king_moves: Vec<BitBoard>,
+    pub knight_moves: Vec<BitBoard>,
+    pub rook_moves: Vec<(BitBoard, HashMap<BitBoard, BitBoard>)>,
+    pub bishop_moves: Vec<(BitBoard, HashMap<BitBoard, BitBoard>)>,
+}
+
+impl MoveGenMasks {
+    pub fn load() -> Self {
+        let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, KING_MOVES_FILE)).unwrap();
+        let king_moves = deserialize_from::<&mut File, Vec<BitBoard>>(&mut reader).unwrap();
+
+        let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, KNIGHT_MOVES_FILE)).unwrap();
+        let knight_moves = deserialize_from::<&mut File, Vec<BitBoard>>(&mut reader).unwrap();
+
+        let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, ROOK_MOVES_FILE)).unwrap();
+        let rook_moves =
+            deserialize_from::<&mut File, Vec<(BitBoard, HashMap<BitBoard, BitBoard>)>>(
+                &mut reader,
+            )
+            .unwrap();
+
+        let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, BISHOP_MOVES_FILE)).unwrap();
+        let bishop_moves = deserialize_from::<
+            &mut File,
+            Vec<(BitBoard, HashMap<BitBoard, BitBoard>)>,
+        >(&mut reader)
+        .unwrap();
+
+        Self {
+            king_moves,
+            knight_moves,
+            rook_moves,
+            bishop_moves,
+        }
+    }
+}
+
 const MOVES_FOLDER_PATH: &str = "./src/moves/data/";
 const KING_MOVES_FILE: &str = "king.bin";
 const KNIGHT_MOVES_FILE: &str = "knight.bin";
@@ -94,7 +132,7 @@ fn generate_rook_moves_mask(square: &Square) -> BitBoard {
 }
 
 // TODO: This needs magic
-fn generate_rook_moves(square: &Square) -> HashMap<BitBoard, BitBoard> {
+fn generate_rook_moves(square: &Square) -> (BitBoard, HashMap<BitBoard, BitBoard>) {
     let full_mask = generate_rook_moves_mask(square);
 
     let blockers_mask = create_blocker_boards(&full_mask);
@@ -106,10 +144,10 @@ fn generate_rook_moves(square: &Square) -> HashMap<BitBoard, BitBoard> {
     for (blockers, legal_moves) in blockers_mask.into_iter().zip(legal_moves_mask) {
         output.insert(blockers, legal_moves);
     }
-    output
+    (full_mask, output)
 }
 
-fn generate_bishop_moves(square: &Square) -> HashMap<BitBoard, BitBoard> {
+fn generate_bishop_moves(square: &Square) -> (BitBoard, HashMap<BitBoard, BitBoard>) {
     let all_move_mask = generate_bishop_move_mask(square);
     let blockers = create_blocker_boards(&all_move_mask);
     let legal_moves = generate_slider_moves_from_blockers(square, &blockers, Pieces::BISHOP);
@@ -119,7 +157,7 @@ fn generate_bishop_moves(square: &Square) -> HashMap<BitBoard, BitBoard> {
     for (blockers, legal_moves) in blockers.into_iter().zip(legal_moves) {
         output.insert(blockers, legal_moves);
     }
-    output
+    (all_move_mask, output)
 }
 
 fn generate_slider_moves_from_blockers(
@@ -241,8 +279,8 @@ fn create_blocker_boards(bitboard: &BitBoard) -> Vec<BitBoard> {
 pub fn generate_moves() {
     let mut king_moves: Vec<BitBoard> = Vec::with_capacity(64);
     let mut knight_moves: Vec<BitBoard> = Vec::with_capacity(64);
-    let mut rook_moves: Vec<HashMap<BitBoard, BitBoard>> = Vec::with_capacity(64);
-    let mut bishop_moves: Vec<HashMap<BitBoard, BitBoard>> = Vec::with_capacity(64);
+    let mut rook_moves: Vec<(BitBoard, HashMap<BitBoard, BitBoard>)> = Vec::with_capacity(64);
+    let mut bishop_moves: Vec<(BitBoard, HashMap<BitBoard, BitBoard>)> = Vec::with_capacity(64);
     for i in 0..63 {
         let square = Square::new(i);
 
@@ -276,14 +314,19 @@ pub fn read_moves() {
     println!("{}", a[2]);
 }
 
-pub fn save_sliding_move_file(file_name: &str, moves: Vec<HashMap<BitBoard, BitBoard>>) {
+pub fn save_sliding_move_file(
+    file_name: &str,
+    moves: Vec<(BitBoard, HashMap<BitBoard, BitBoard>)>,
+) {
     let file = File::create(format!("{}{}", MOVES_FOLDER_PATH, file_name)).unwrap();
     serialize_into(file, &moves).unwrap();
 }
 
 pub fn read_sliding_moves() {
     let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, KING_MOVES_FILE)).unwrap();
-    let _ = deserialize_from::<&mut File, Vec<HashMap<BitBoard, BitBoard>>>(&mut reader).unwrap();
+    let _ =
+        deserialize_from::<&mut File, Vec<(BitBoard, HashMap<BitBoard, BitBoard>)>>(&mut reader)
+            .unwrap();
 }
 
 #[cfg(test)]
