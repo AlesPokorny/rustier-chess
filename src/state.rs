@@ -5,6 +5,7 @@ use crate::{piece::Color, square::Square};
 /// bit 2:      black short
 /// bit 3:      black long
 /// bits 4-7:   unused
+#[derive(Debug)]
 pub struct Castling(u8);
 
 impl Default for Castling {
@@ -79,6 +80,7 @@ impl Castling {
     }
 }
 
+#[derive(Debug)]
 pub struct State {
     pub castling: Castling,
     pub en_passant: Option<Square>,

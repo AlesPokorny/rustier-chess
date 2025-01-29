@@ -22,16 +22,18 @@ use crate::board::Board;
 fn main() {
     let board = Board::default();
 
-    let move_gen_mask = MoveGenMasks::load();
+    println!("{}", board);
 
-    for square in board.pieces[board.state.turn][Pieces::PAWN].get_ones() {
-        println!("{}", square);
-        // let moves = get_pawn_moves(&square, &move_gen_mask, &board);
-        let now = Instant::now();
-        let moves = get_pawn_moves(square, &board);
-        let duration = now.elapsed();
-        println!("{:?}", duration);
-    }
+    // let move_gen_mask = MoveGenMasks::load();
+
+    // for square in board.pieces[board.state.turn][Pieces::PAWN].get_ones() {
+    //     println!("{}", square);
+    //     // let moves = get_pawn_moves(&square, &move_gen_mask, &board);
+    //     let now = Instant::now();
+    //     let moves = get_pawn_moves(square, &board);
+    //     let duration = now.elapsed();
+    //     println!("{:?}", duration);
+    // }
 
     // println!("{}", Square::new(8));
 }

@@ -77,9 +77,9 @@ impl Board {
     }
 
     pub fn from_fen(fen: &str) -> Result<Self, Box<dyn Error>> {
-        let fen_parts: Vec<&str> = fen.split(" ").collect();
+        let fen_parts: Vec<&str> = fen.trim().split(" ").collect();
 
-        if fen_parts.len() != 5 {
+        if fen_parts.len() != 6 {
             return Err("Incorrect fen string")?;
         }
 
@@ -116,7 +116,7 @@ impl Board {
 
         for (rank, rank_str) in board_string_parts.iter().enumerate() {
             let mut file = 0_usize;
-            for fen_char in rank_str.chars().rev() {
+            for fen_char in rank_str.chars() {
                 if (rank > 7) | (file > 7) {
                     panic!("Invalid fen");
                 }
@@ -168,9 +168,13 @@ impl Board {
             }
         }
 
-        let en_passant = match Square::from_str(fen_parts[3]) {
-            Ok(square) => Some(square),
-            Err(_) => None,
+        let en_passant = if fen_parts[3] == "-" {
+            None
+        } else {
+            match Square::from_str(fen_parts[3]) {
+                Ok(square) => Some(square),
+                Err(_) => return Err("Error parsing en passant square")?,
+            }
         };
 
         let half_moves = match fen_parts[4].parse::<u8>() {
@@ -203,29 +207,7 @@ impl Board {
 
 impl Default for Board {
     fn default() -> Self {
-        Self {
-            colors: [BitBoard::new(0xFFFF), BitBoard::new(0xFFFF000000000000)],
-            pieces: [
-                [
-                    BitBoard::new(0x8),    // queens
-                    BitBoard::new(0x81),   // rooks
-                    BitBoard::new(0x24),   // bishops
-                    BitBoard::new(0x42),   // knights
-                    BitBoard::new(0xFF00), // pawns
-                    BitBoard::new(0x10),   // king
-                ],
-                [
-                    BitBoard::new(0x800000000000000),  // queens
-                    BitBoard::new(0x8100000000000000), // rooks
-                    BitBoard::new(0x2400000000000000), // bishops
-                    BitBoard::new(0x4200000000000000), // knights
-                    BitBoard::new(0xFF000000000000),   // pawns
-                    BitBoard::new(0x1000000000000000), // king
-                ],
-            ],
-            all_pieces: BitBoard::new(0xFFFF00000000FFFF),
-            state: State::default(),
-        }
+        Self::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap()
     }
 }
 
