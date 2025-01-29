@@ -14,12 +14,36 @@ impl Default for Castling {
 }
 
 impl Castling {
+    pub fn new() -> Self {
+        Self(0)
+    }
+
     pub fn read_bit(&self, bit: u8) -> bool {
         self.0 & (1 << bit) != 0
     }
 
     pub fn set_zero(&mut self, bit: u8) {
         self.0 &= !(1 << bit);
+    }
+
+    pub fn set_one(&mut self, bit: u8) {
+        self.0 |= 1 << bit;
+    }
+
+    pub fn set_white_short(&mut self) {
+        self.set_one(0)
+    }
+
+    pub fn set_white_long(&mut self) {
+        self.set_one(1)
+    }
+
+    pub fn set_black_short(&mut self) {
+        self.set_one(2)
+    }
+
+    pub fn set_black_long(&mut self) {
+        self.set_one(3)
     }
 
     pub fn white_short(&self) -> bool {
@@ -59,6 +83,7 @@ pub struct State {
     pub castling: Castling,
     pub en_passant: Option<Square>,
     pub half_moves: u8,
+    pub full_moves: u16,
     pub turn: usize,
 }
 
@@ -68,6 +93,7 @@ impl Default for State {
             castling: Castling::default(),
             en_passant: None,
             half_moves: 0,
+            full_moves: 0,
             turn: Color::WHITE,
         }
     }
