@@ -156,6 +156,7 @@ impl Board {
         } else {
             Color::BLACK
         };
+        let opponent = if turn == 1 { 0 } else { 1 };
 
         let mut castling = Castling::new();
         for castling_char in fen_parts[2].chars() {
@@ -192,6 +193,7 @@ impl Board {
             half_moves,
             full_moves,
             turn,
+            opponent,
         };
 
         let board = Self {

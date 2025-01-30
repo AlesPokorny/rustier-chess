@@ -87,6 +87,7 @@ pub struct State {
     pub half_moves: u8,
     pub full_moves: u16,
     pub turn: usize,
+    pub opponent: usize,
 }
 
 impl Default for State {
@@ -97,6 +98,7 @@ impl Default for State {
             half_moves: 0,
             full_moves: 0,
             turn: Color::WHITE,
+            opponent: Color::BLACK,
         }
     }
 }
@@ -112,13 +114,12 @@ impl State {
 
     pub fn change_turn(&mut self) {
         self.turn = if self.turn == 0 { 1 } else { 0 };
-    }
-
-    pub fn opponent_turn(&self) -> usize {
         if self.turn == 0 {
-            1
+            self.turn = 1;
+            self.opponent = 0;
         } else {
-            0
+            self.turn = 0;
+            self.opponent = 1;
         }
     }
 

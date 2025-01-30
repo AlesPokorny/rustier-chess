@@ -22,7 +22,11 @@ use crate::board::Board;
 fn main() {
     let board = Board::default();
 
-    println!("{}", board);
+    let a = 0b1100;
+    println!("{}", a);
+    let b = 0b11;
+    println!("{}", b);
+    println!("{}", (a >> 2) & (b));
 
     // let move_gen_mask = MoveGenMasks::load();
 
