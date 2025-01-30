@@ -71,11 +71,15 @@ pub fn get_knight_moves(
 }
 
 fn get_king_moves(square: &Square, move_gen_masks: &MoveGenMasks, board: &Board) -> Vec<Move> {
-    (move_gen_masks.king_moves[square.as_usize()] & !board.colors[board.state.turn])
+    let mut moves: Vec<Move> = (move_gen_masks.king_moves[square.as_usize()]
+        & !board.colors[board.state.turn])
         .get_ones()
         .into_iter()
         .map(|new_square| Move::from_origin_and_destination(&new_square, square))
-        .collect()
+        .collect();
+    moves.append(&mut get_castling_moves(board, move_gen_masks));
+
+    moves
 }
 
 fn get_rook_move_mask(square: &Square, board: &Board, move_gen_masks: &MoveGenMasks) -> BitBoard {
@@ -98,7 +102,8 @@ fn get_rook_moves(square: &Square, board: &Board, move_gen_masks: &MoveGenMasks)
 fn get_bishop_move_mask(square: &Square, board: &Board, move_gen_masks: &MoveGenMasks) -> BitBoard {
     let (move_mask, move_map) = move_gen_masks.bishop_moves.get(square.as_usize()).unwrap();
     let blocker_mask = *move_mask & board.all_pieces;
-    *move_map.get(&blocker_mask).unwrap()
+
+    *move_map.get(&blocker_mask).unwrap() & !board.colors[board.state.turn]
 }
 
 fn get_bishop_moves(square: &Square, board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move> {
@@ -110,6 +115,12 @@ fn get_bishop_moves(square: &Square, board: &Board, move_gen_masks: &MoveGenMask
         all_moves.push(Move::from_origin_and_destination(&new_square, square))
     }
     all_moves
+}
+
+fn get_queen_moves(square: &Square, board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move> {
+    let mut moves: Vec<Move> = get_bishop_moves(square, board, move_gen_masks);
+    moves.append(&mut get_rook_moves(square, board, move_gen_masks));
+    moves
 }
 
 fn get_castling_moves(board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move> {
@@ -206,6 +217,28 @@ fn is_square_in_check(square: &Square, board: &Board, move_gen_masks: &MoveGenMa
     }
 
     false
+}
+
+fn get_all_moves(board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move> {
+    let mut all_moves: Vec<Move> = Vec::with_capacity(139); // maximum number of moves in a position
+    for (piece, piece_board) in board.pieces[board.state.turn].iter().enumerate() {
+        let all_squares = piece_board.get_ones();
+        let mut piece_moves: Vec<Move> = all_squares
+            .into_iter()
+            .flat_map(|square| match piece {
+                Pieces::PAWN => get_pawn_moves(square, board),
+                Pieces::BISHOP => get_bishop_moves(&square, board, move_gen_masks),
+                Pieces::KNIGHT => get_knight_moves(&square, move_gen_masks, board),
+                Pieces::ROOK => get_rook_moves(&square, board, move_gen_masks),
+                Pieces::KING => get_king_moves(&square, move_gen_masks, board),
+                Pieces::QUEEN => get_queen_moves(&square, board, move_gen_masks),
+                _ => panic!("That is a weird piece"),
+            })
+            .collect();
+        all_moves.append(&mut piece_moves);
+    }
+
+    all_moves
 }
 
 #[cfg(test)]
@@ -308,5 +341,14 @@ mod test_move_calculation {
         assert_eq!(long.get_destination(), Square::from_str("c1").unwrap());
         assert_eq!(long.get_origin(), Square::from_str("e1").unwrap());
         assert!(long.is_castling());
+    }
+
+    #[test]
+    fn test_get_all_moves() {
+        let board = Board::default();
+        let move_gen_masks = MoveGenMasks::load();
+
+        let moves = get_all_moves(&board, &move_gen_masks);
+        assert_eq!(moves.len(), 20);
     }
 }
