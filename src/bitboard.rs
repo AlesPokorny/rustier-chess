@@ -11,7 +11,7 @@ use serde_derive::{Deserialize, Serialize};
 use crate::square::Square;
 
 #[derive(Clone, Copy, Hash, Serialize, Deserialize, PartialEq, Eq)]
-pub struct BitBoard(u64);
+pub struct BitBoard(pub u64);
 
 impl BitBoard {
     pub fn new(value: u64) -> Self {

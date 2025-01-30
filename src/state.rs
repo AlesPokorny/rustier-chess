@@ -78,6 +78,15 @@ impl Castling {
     pub fn remove_black_long(&mut self) {
         self.set_zero(3)
     }
+
+    /// return (short, long) tuple
+    pub fn can_castle(&self, color: usize) -> (bool, bool) {
+        if color == Color::WHITE {
+            (self.white_short(), self.white_long())
+        } else {
+            (self.black_short(), self.black_long())
+        }
+    }
 }
 
 #[derive(Debug)]

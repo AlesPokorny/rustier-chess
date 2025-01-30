@@ -19,11 +19,11 @@ impl Move {
     }
 
     pub fn from_origin(origin: &Square) -> Self {
-        Self(origin.as_u16() << 5)
+        Self(origin.as_u16() << 6)
     }
 
     pub fn from_origin_and_destination(destination: &Square, origin: &Square) -> Self {
-        Self(destination.as_u16() | (origin.as_u16() << 5))
+        Self(destination.as_u16() | (origin.as_u16() << 6))
     }
 
     pub fn set_destination(&mut self, square: &Square) {
@@ -31,7 +31,11 @@ impl Move {
     }
 
     pub fn set_origin(&mut self, square: &Square) {
-        self.0 |= square.as_u16() << 5
+        self.0 |= square.as_u16() << 6
+    }
+
+    pub fn set_castling(&mut self) {
+        self.0 |= 3 << 14
     }
 
     pub fn set_promotion(&mut self, piece_type: usize) {
@@ -48,11 +52,15 @@ impl Move {
     }
 
     pub fn get_destination(&self) -> Square {
-        Square::new((self.0 & 0b11111) as u8)
+        Square::new((self.0 & 0b111111) as u8)
     }
 
     pub fn get_origin(&self) -> Square {
-        Square::new(((self.0 & 0b1111100000) >> 5) as u8)
+        Square::new(((self.0 & 0b111111000000) >> 6) as u8)
+    }
+
+    pub fn is_castling(&self) -> bool {
+        self.0 >> 14 == 3
     }
 }
 

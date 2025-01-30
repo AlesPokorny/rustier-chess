@@ -5,6 +5,11 @@ use crate::{board::Board, piece::Color, square::Square};
 
 use super::move_mask_gen::MoveGenMasks;
 
+const CASTLING_WHITE_LONG: BitBoard = BitBoard(0xC);
+const CASTLING_WHITE_SHORT: BitBoard = BitBoard(0x60);
+const CASTLING_BLACK_LONG: BitBoard = BitBoard(0xC00000000000000);
+const CASTLING_BLACK_SHORT: BitBoard = BitBoard(0x6000000000000000);
+
 pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
     let mut moves: Vec<Move> = Vec::new();
     let direction = if board.state.turn == Color::WHITE {
@@ -105,6 +110,58 @@ fn get_bishop_moves(square: &Square, board: &Board, move_gen_masks: &MoveGenMask
         all_moves.push(Move::from_origin_and_destination(&new_square, square))
     }
     all_moves
+}
+
+fn get_castling_moves(board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move> {
+    let (can_short, can_long) = board.state.castling.can_castle(board.state.turn);
+    let mut castling_moves: Vec<Move> = Vec::with_capacity(1);
+    if can_short {
+        let mask = if board.state.turn == Color::WHITE {
+            CASTLING_WHITE_SHORT
+        } else {
+            CASTLING_BLACK_SHORT
+        };
+        if (mask & board.all_pieces).is_empty()
+            & mask
+                .get_ones()
+                .iter()
+                .all(|square| !is_square_in_check(square, board, move_gen_masks))
+        {
+            let (origin, destination) = if board.state.turn == Color::WHITE {
+                (Square::new(4), Square::new(6))
+            } else {
+                (Square::new(60), Square::new(62))
+            };
+            let mut castling_move = Move::from_origin_and_destination(&destination, &origin);
+            castling_move.set_castling();
+            castling_moves.push(castling_move);
+        }
+    }
+
+    if can_long {
+        let mask = if board.state.turn == Color::WHITE {
+            CASTLING_WHITE_LONG
+        } else {
+            CASTLING_BLACK_LONG
+        };
+        if (mask & board.all_pieces).is_empty()
+            & mask
+                .get_ones()
+                .iter()
+                .all(|square| !is_square_in_check(square, board, move_gen_masks))
+        {
+            let (origin, destination) = if board.state.turn == Color::WHITE {
+                (Square::new(4), Square::new(2))
+            } else {
+                (Square::new(60), Square::new(58))
+            };
+            let mut castling_move = Move::from_origin_and_destination(&destination, &origin);
+            castling_move.set_castling();
+            castling_moves.push(castling_move);
+        }
+    }
+
+    castling_moves
 }
 
 fn is_square_in_check(square: &Square, board: &Board, move_gen_masks: &MoveGenMasks) -> bool {
@@ -212,5 +269,44 @@ mod test_move_calculation {
             let square = Square::from_str(square_str).unwrap();
             is_square_in_check(&square, &board, &move_gen_masks)
         }));
+    }
+
+    #[test]
+    fn test_get_castling_moves_black() {
+        let board = Board::from_fen(
+            "r1b1k2r/pppq1ppp/2np1n2/2b1p3/4P3/1PNB1N2/PBPPQPPP/R3K2R b KQkq - 5 7",
+        )
+        .unwrap();
+        let move_gen_masks = MoveGenMasks::load();
+
+        let moves = get_castling_moves(&board, &move_gen_masks);
+        let expected_from = Square::from_str("e8").unwrap();
+        let expected_to = Square::from_str("g8").unwrap();
+        assert_eq!(moves.len(), 1);
+        let the_move = moves.get(0).unwrap();
+        assert_eq!(the_move.get_destination(), expected_to);
+        assert_eq!(the_move.get_origin(), expected_from);
+        assert!(the_move.is_castling());
+    }
+
+    #[test]
+    fn test_get_castling_moves_white() {
+        let board = Board::from_fen(
+            "r1b1k2r/pppq1ppp/3p1n2/2b1p3/3nP3/1PNB1N2/PBPPQPPP/R3K2R w KQkq - 6 8",
+        )
+        .unwrap();
+        let move_gen_masks = MoveGenMasks::load();
+
+        let moves = get_castling_moves(&board, &move_gen_masks);
+        assert_eq!(moves.len(), 2);
+        let short = moves.get(0).unwrap();
+        assert_eq!(short.get_destination(), Square::from_str("g1").unwrap());
+        assert_eq!(short.get_origin(), Square::from_str("e1").unwrap());
+        assert!(short.is_castling());
+
+        let long = moves.get(1).unwrap();
+        assert_eq!(long.get_destination(), Square::from_str("c1").unwrap());
+        assert_eq!(long.get_origin(), Square::from_str("e1").unwrap());
+        assert!(long.is_castling());
     }
 }
