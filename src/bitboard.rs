@@ -64,6 +64,10 @@ impl BitBoard {
         }
     }
 
+    pub fn get_one(&self) -> Square {
+        Square::new(self.0.trailing_zeros() as u8)
+    }
+
     pub fn zeros() -> Self {
         Self(0)
     }

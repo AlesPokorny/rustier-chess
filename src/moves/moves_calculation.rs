@@ -175,7 +175,7 @@ fn get_castling_moves(board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move>
     castling_moves
 }
 
-fn is_square_in_check(square: &Square, board: &Board, move_gen_masks: &MoveGenMasks) -> bool {
+pub fn is_square_in_check(square: &Square, board: &Board, move_gen_masks: &MoveGenMasks) -> bool {
     let square_usize = square.as_usize();
     let opponent_pieces = board.pieces[board.state.opponent];
 
@@ -219,7 +219,7 @@ fn is_square_in_check(square: &Square, board: &Board, move_gen_masks: &MoveGenMa
     false
 }
 
-fn get_all_moves(board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move> {
+pub fn get_all_moves(board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move> {
     let mut all_moves: Vec<Move> = Vec::with_capacity(139); // maximum number of moves in a position
     for (piece, piece_board) in board.pieces[board.state.turn].iter().enumerate() {
         let all_squares = piece_board.get_ones();
@@ -267,7 +267,7 @@ mod test_move_calculation {
 
     #[test]
     fn test_get_black_pawn_moves() {
-        let square = Square::new(55);
+        let square = Square::from_str("b7").unwrap();
         let mut board = Board::default();
         board.state.change_turn();
 
@@ -275,9 +275,10 @@ mod test_move_calculation {
 
         assert_eq!(
             moves[0],
-            Move::from_origin_and_destination(&Square::new(47), &square)
+            Move::from_origin_and_destination(&Square::from_str("b6").unwrap(), &square)
         );
-        let mut new_move = Move::from_origin_and_destination(&Square::new(39), &square);
+        let mut new_move =
+            Move::from_origin_and_destination(&Square::from_str("b5").unwrap(), &square);
         new_move.set_en_passant();
         assert_eq!(moves[1], new_move);
     }
@@ -319,7 +320,7 @@ mod test_move_calculation {
         let the_move = moves.get(0).unwrap();
         assert_eq!(the_move.get_destination(), expected_to);
         assert_eq!(the_move.get_origin(), expected_from);
-        assert!(the_move.is_castling());
+        assert!(the_move.special_move() == 3);
     }
 
     #[test]
@@ -335,12 +336,12 @@ mod test_move_calculation {
         let short = moves.get(0).unwrap();
         assert_eq!(short.get_destination(), Square::from_str("g1").unwrap());
         assert_eq!(short.get_origin(), Square::from_str("e1").unwrap());
-        assert!(short.is_castling());
+        assert!(short.special_move() == 3);
 
         let long = moves.get(1).unwrap();
         assert_eq!(long.get_destination(), Square::from_str("c1").unwrap());
         assert_eq!(long.get_origin(), Square::from_str("e1").unwrap());
-        assert!(long.is_castling());
+        assert!(short.special_move() == 3);
     }
 
     #[test]

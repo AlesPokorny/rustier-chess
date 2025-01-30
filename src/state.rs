@@ -5,7 +5,7 @@ use crate::{piece::Color, square::Square};
 /// bit 2:      black short
 /// bit 3:      black long
 /// bits 4-7:   unused
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Castling(u8);
 
 impl Default for Castling {
@@ -89,7 +89,7 @@ impl Castling {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct State {
     pub castling: Castling,
     pub en_passant: Option<Square>,
@@ -117,12 +117,23 @@ impl State {
         self.en_passant = Some(square)
     }
 
-    pub fn increase_half_move(&mut self) {
+    /// increments after each move
+    /// resets after each pawn or capture move
+    /// if reaches 100, game is a draw
+    pub fn increment_half_move(&mut self) {
         self.half_moves += 1;
     }
 
+    pub fn reset_half_move(&mut self) {
+        self.half_moves = 0;
+    }
+
+    /// Increments after each black move
+    pub fn increment_full_move(&mut self) {
+        self.full_moves += 1;
+    }
+
     pub fn change_turn(&mut self) {
-        self.turn = if self.turn == 0 { 1 } else { 0 };
         if self.turn == 0 {
             self.turn = 1;
             self.opponent = 0;

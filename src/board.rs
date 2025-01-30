@@ -9,6 +9,7 @@ use crate::{
     state::{Castling, State},
 };
 
+#[derive(Clone, Copy)]
 pub struct Board {
     pub colors: [BitBoard; 2],
     pub pieces: [[BitBoard; 6]; 2],
@@ -17,32 +18,25 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn get_piece_on_square(&self, square: &Square) -> Option<Piece> {
-        let mut piece_color: usize = 3;
-        for (i, color) in self.colors.iter().enumerate() {
-            if color.read_square(square) {
-                piece_color = i;
-                break;
-            }
-        }
+    pub fn clear_piece(&mut self, square: &Square, piece: usize, color: usize) {
+        self.colors[color].set_zero(square);
+        self.pieces[color][piece].set_zero(square);
+    }
 
-        if piece_color == 3 {
-            return None;
-        }
+    pub fn move_piece(
+        &mut self,
+        origin: &Square,
+        destination: &Square,
+        piece: usize,
+        color: usize,
+    ) {
+        self.colors[color].set_one(destination);
+        self.pieces[color][piece].set_one(destination);
+        self.clear_piece(origin, piece, color);
+    }
 
-        let mut piece_type = 9_usize;
-
-        for (i, piece_bb) in self.pieces[piece_color].iter().enumerate() {
-            if piece_bb.read_square(square) {
-                piece_type = i;
-                break;
-            }
-        }
-        if piece_type == 9 {
-            panic!("Found piece color but not piece type");
-        }
-
-        Some(Piece::new(piece_type, piece_color))
+    pub fn sync_all_pieces(&mut self) {
+        self.all_pieces = self.colors[0] & self.colors[1];
     }
 
     #[cfg(test)]
@@ -204,6 +198,34 @@ impl Board {
         };
 
         Ok(board)
+    }
+
+    fn get_piece_on_square(&self, square: &Square) -> Option<Piece> {
+        let mut piece_color: usize = 3;
+        for (i, color) in self.colors.iter().enumerate() {
+            if color.read_square(square) {
+                piece_color = i;
+                break;
+            }
+        }
+
+        if piece_color == 3 {
+            return None;
+        }
+
+        let mut piece_type = 9_usize;
+
+        for (i, piece_bb) in self.pieces[piece_color].iter().enumerate() {
+            if piece_bb.read_square(square) {
+                piece_type = i;
+                break;
+            }
+        }
+        if piece_type == 9 {
+            panic!("Found piece color but not piece type");
+        }
+
+        Some(Piece::new(piece_type, piece_color))
     }
 }
 

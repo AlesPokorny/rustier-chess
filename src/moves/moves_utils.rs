@@ -35,7 +35,7 @@ impl Move {
     }
 
     pub fn set_castling(&mut self) {
-        self.0 |= 3 << 14
+        self.0 |= 0xc000 // 3 << 14
     }
 
     pub fn set_promotion(&mut self, piece_type: usize) {
@@ -44,23 +44,27 @@ impl Move {
             _ => panic!("Cannot promote to king nor pawn"),
         };
         self.0 |= piece_value << 12;
-        self.0 |= 1 << 14;
+        self.0 |= 0x4000; // 1 << 14
     }
 
     pub fn set_en_passant(&mut self) {
-        self.0 |= 1 << 15;
+        self.0 |= 0x8000; // 1 << 15
     }
 
     pub fn get_destination(&self) -> Square {
-        Square::new((self.0 & 0b111111) as u8)
+        Square::new((self.0 & 0x3f) as u8) // 0b111111
     }
 
     pub fn get_origin(&self) -> Square {
-        Square::new(((self.0 & 0b111111000000) >> 6) as u8)
+        Square::new(((self.0 & 0xfc0) >> 6) as u8) // 0b111111000000
     }
 
-    pub fn is_castling(&self) -> bool {
-        self.0 >> 14 == 3
+    pub fn special_move(&self) -> u16 {
+        self.0 >> 14
+    }
+
+    pub fn get_promotion_piece(&self) -> usize {
+        (self.0 & 0x3000) as usize
     }
 }
 

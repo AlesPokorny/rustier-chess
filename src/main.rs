@@ -22,11 +22,8 @@ use crate::board::Board;
 fn main() {
     let board = Board::default();
 
-    let a = 0b1100;
-    println!("{}", a);
-    let b = 0b11;
-    println!("{}", b);
-    println!("{}", (a >> 2) & (b));
+    println!("{:x}", 0b11 << 12);
+    // println!("{:x}", 0b111111000000);
 
     // let move_gen_mask = MoveGenMasks::load();
 
