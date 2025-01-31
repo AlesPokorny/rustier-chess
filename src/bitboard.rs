@@ -196,9 +196,9 @@ mod test_bitboard {
         let bitboard = BitBoard::new(5);
 
         assert!(bitboard.read_square(&Square::new(0)));
-        assert!(bitboard.read_square(&Square::new(1)));
+        assert!(!bitboard.read_square(&Square::new(1)));
         assert!(bitboard.read_square(&Square::new(2)));
-        assert!(bitboard.read_square(&Square::new(3)));
+        assert!(!bitboard.read_square(&Square::new(3)));
     }
 
     #[test]
