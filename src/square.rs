@@ -130,7 +130,7 @@ impl Add<i8> for Square {
     fn add(self, rhs: i8) -> Self::Output {
         let int = self.0 as i8;
         if rhs < 0 && rhs.abs() > int {
-            panic!("Boomsies")
+            panic!("Boomsies, tried to pass {} to square {}", rhs, self)
         }
 
         Self((int + rhs) as u8)

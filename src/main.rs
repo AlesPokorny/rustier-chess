@@ -2,27 +2,31 @@
 
 mod bitboard;
 mod board;
-mod game;
 mod moves;
+mod perft;
 mod piece;
 mod square;
 mod state;
 
-use std::time::Instant;
+// use std::time::Instant;
 
-use moves::move_mask_gen::generate_moves;
-use moves::move_mask_gen::MoveGenMasks;
-use moves::moves_calculation::{get_knight_moves, get_pawn_moves};
-use piece::Piece;
-use piece::Pieces;
-use square::Square;
+// use moves::move_mask_gen::generate_moves;
+// use moves::move_mask_gen::MoveGenMasks;
+// use moves::moves_calculation::{get_knight_moves, get_pawn_moves};
+// use piece::Piece;
+// use piece::Pieces;
+// use square::Square;
 
-use crate::board::Board;
+// use crate::board::Board;
 
 fn main() {
-    let board = Board::default();
+    // let board = Board::default();
 
-    println!("{:x}", 0b11 << 12);
+    // generate_moves();
+
+    println!("{:b}", 0x4000); // 1 << 14
+
+    // println!("{:x}", 0b11 << 12);
     // println!("{:x}", 0b111111000000);
 
     // let move_gen_mask = MoveGenMasks::load();

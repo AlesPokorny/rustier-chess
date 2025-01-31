@@ -9,7 +9,9 @@ const CASTLING_WHITE_LONG: BitBoard = BitBoard(0xC);
 const CASTLING_WHITE_SHORT: BitBoard = BitBoard(0x60);
 const CASTLING_BLACK_LONG: BitBoard = BitBoard(0xC00000000000000);
 const CASTLING_BLACK_SHORT: BitBoard = BitBoard(0x6000000000000000);
+const PROMOTION_PIECES: [usize; 4] = [Pieces::QUEEN, Pieces::KNIGHT, Pieces::ROOK, Pieces::BISHOP];
 
+// TODO: Clean this shit up
 pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
     let mut moves: Vec<Move> = Vec::new();
     let direction = if board.state.turn == Color::WHITE {
@@ -20,38 +22,53 @@ pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
 
     let new_square = square + direction * 8;
 
-    if !(board.colors[0] & board.colors[1]).read_square(&new_square) {
+    if !(board.colors[0] | board.colors[1]).read_square(&new_square) {
         let new_move = Move::from_origin_and_destination(&new_square, &square);
-        moves.push(new_move);
-
-        let base_rank = if board.state.turn == Color::WHITE {
-            1
+        if !(1..6).contains(&new_square.get_rank()) {
+            for piece in PROMOTION_PIECES {
+                let mut promotion_move = new_move.clone();
+                promotion_move.set_promotion(piece);
+                moves.push(promotion_move);
+            }
         } else {
-            6
-        };
+            moves.push(new_move);
 
-        if square.get_rank() == base_rank {
-            let new_square = square + direction * 16;
-            if !(board.colors[0] & board.colors[1]).read_square(&new_square) {
-                let mut new_move = Move::from_origin_and_destination(&new_square, &square);
-                new_move.set_en_passant();
-                moves.push(new_move);
+            let base_rank = if board.state.turn == Color::WHITE {
+                1
+            } else {
+                6
+            };
+
+            if square.get_rank() == base_rank {
+                let new_square = square + direction * 16;
+                if !(board.colors[0] | board.colors[1]).read_square(&new_square) {
+                    let mut new_move = Move::from_origin_and_destination(&new_square, &square);
+                    new_move.set_en_passant();
+                    moves.push(new_move);
+                }
             }
         }
     }
 
     for offset in [7, 9] {
         let attacking_square = square + direction * offset;
-        if (square.get_rank() as i8 - attacking_square.get_rank() as i8).abs() > 1 {
+        let attacking_square_rank = attacking_square.get_rank();
+        if (square.get_rank() as i8 - attacking_square_rank as i8).abs() != 1 {
             continue;
         }
         if board.colors[board.state.opponent].read_square(&attacking_square)
             | board.check_en_passant(&attacking_square)
         {
-            moves.push(Move::from_origin_and_destination(
-                &attacking_square,
-                &square,
-            ))
+            let new_move = Move::from_origin_and_destination(&attacking_square, &square);
+            if !(1..6).contains(&attacking_square_rank) {
+                for piece in PROMOTION_PIECES {
+                    let mut promotion_move = new_move.clone();
+                    promotion_move.set_promotion(piece);
+                    moves.push(promotion_move);
+                }
+            } else {
+                moves.push(new_move)
+            }
         }
     }
 
@@ -207,7 +224,11 @@ pub fn is_square_in_check(square: &Square, board: &Board, move_gen_masks: &MoveG
         -1
     };
     for offset in [7, 9] {
-        let attacking_square = *square + pawn_direction * offset;
+        let new_bit = square.as_u8() as i8 + pawn_direction * offset;
+        if !(0..64).contains(&new_bit) {
+            continue;
+        }
+        let attacking_square = Square::new(new_bit as u8);
         if (square.get_rank() as i8 - attacking_square.get_rank() as i8).abs() != 1 {
             continue;
         }
@@ -317,7 +338,7 @@ mod test_move_calculation {
         let expected_from = Square::from_str("e8").unwrap();
         let expected_to = Square::from_str("g8").unwrap();
         assert_eq!(moves.len(), 1);
-        let the_move = moves.get(0).unwrap();
+        let the_move = moves.first().unwrap();
         assert_eq!(the_move.get_destination(), expected_to);
         assert_eq!(the_move.get_origin(), expected_from);
         assert!(the_move.special_move() == 3);
@@ -333,7 +354,7 @@ mod test_move_calculation {
 
         let moves = get_castling_moves(&board, &move_gen_masks);
         assert_eq!(moves.len(), 2);
-        let short = moves.get(0).unwrap();
+        let short = moves.first().unwrap();
         assert_eq!(short.get_destination(), Square::from_str("g1").unwrap());
         assert_eq!(short.get_origin(), Square::from_str("e1").unwrap());
         assert!(short.special_move() == 3);

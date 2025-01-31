@@ -281,7 +281,7 @@ pub fn generate_moves() {
     let mut knight_moves: Vec<BitBoard> = Vec::with_capacity(64);
     let mut rook_moves: Vec<(BitBoard, HashMap<BitBoard, BitBoard>)> = Vec::with_capacity(64);
     let mut bishop_moves: Vec<(BitBoard, HashMap<BitBoard, BitBoard>)> = Vec::with_capacity(64);
-    for i in 0..63 {
+    for i in 0..64 {
         let square = Square::new(i);
 
         let king_bb = generate_king_moves(&square);
@@ -306,12 +306,6 @@ pub fn generate_moves() {
 pub fn save_move_file(file_name: &str, moves: Vec<BitBoard>) {
     let file = File::create(format!("{}{}", MOVES_FOLDER_PATH, file_name)).unwrap();
     serialize_into(file, &moves).unwrap();
-}
-
-pub fn read_moves() {
-    let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, KING_MOVES_FILE)).unwrap();
-    let a = deserialize_from::<&mut File, Vec<BitBoard>>(&mut reader).unwrap();
-    println!("{}", a[2]);
 }
 
 pub fn save_sliding_move_file(

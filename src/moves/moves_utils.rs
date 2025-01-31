@@ -1,8 +1,8 @@
-use std::fmt;
+use std::fmt::{self, Display};
 
-use crate::square::Square;
+use crate::{piece::Pieces, square::Square};
 
-#[derive(PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 /// bit 0..5     destination
 /// bit 6..11    origin
 /// bit 12..13   promotion piece (0 queen, 1 rook, 2 bishop, 3 knight)
@@ -59,31 +59,44 @@ impl Move {
         Square::new(((self.0 & 0xfc0) >> 6) as u8) // 0b111111000000
     }
 
+    ///1 - promotion flag, 2 en passant, 3 castling
     pub fn special_move(&self) -> u16 {
         self.0 >> 14
     }
 
     pub fn get_promotion_piece(&self) -> usize {
-        (self.0 & 0x3000) as usize
-    }
-}
-
-impl fmt::Display for Move {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let origin = self.get_origin();
-        let destination = self.get_destination();
-        writeln!(f, "from: {}, to: {}", origin, destination)?;
-
-        Ok(())
+        ((self.0 & 0x3000) >> 12) as usize
     }
 }
 
 impl fmt::Debug for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let origin = self.get_origin();
-        let destination = self.get_destination();
-        write!(f, "from: {}, to: {}", origin, destination)?;
+        write!(f, "{}", self)?;
 
         Ok(())
+    }
+}
+
+impl Display for Move {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let promotion_str = if self.special_move() == 1 {
+            match self.get_promotion_piece() {
+                Pieces::QUEEN => "q",
+                Pieces::KNIGHT => "n",
+                Pieces::ROOK => "r",
+                Pieces::BISHOP => "b",
+                _ => panic!("wrong promotion piece"),
+            }
+        } else {
+            ""
+        };
+
+        write!(
+            f,
+            "{}{}{}",
+            self.get_origin(),
+            self.get_destination(),
+            promotion_str,
+        )
     }
 }

@@ -195,10 +195,10 @@ mod test_bitboard {
     fn test_read_bit() {
         let bitboard = BitBoard::new(5);
 
-        assert_eq!(bitboard.read_square(&Square::new(0)), true);
-        assert_eq!(bitboard.read_square(&Square::new(1)), false);
-        assert_eq!(bitboard.read_square(&Square::new(2)), true);
-        assert_eq!(bitboard.read_square(&Square::new(3)), false);
+        assert!(bitboard.read_square(&Square::new(0)));
+        assert!(bitboard.read_square(&Square::new(1)));
+        assert!(bitboard.read_square(&Square::new(2)));
+        assert!(bitboard.read_square(&Square::new(3)));
     }
 
     #[test]
@@ -241,7 +241,7 @@ mod test_bitboard {
         let zeros = bitboard.get_zeros();
         let expected_result: Vec<Square> = (0..64)
             .filter(|x| ![0, 2].contains(x))
-            .map(|x| Square::new(x))
+            .map(Square::new)
             .collect();
 
         assert_eq!(zeros, expected_result);
