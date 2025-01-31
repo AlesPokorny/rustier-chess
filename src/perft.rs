@@ -1,7 +1,7 @@
 #[cfg(test)]
 use {
     crate::board::Board, crate::moves::move_mask_gen::MoveGenMasks,
-    crate::moves::moves_utils::Move, std::fs,
+    crate::moves::moves_utils::Move, std::collections::VecDeque, std::fs,
 };
 
 #[cfg(test)]
@@ -22,13 +22,33 @@ fn play_game(board: &Board, move_gen_masks: &MoveGenMasks, depth: u8, max_depth:
 }
 
 #[cfg(test)]
-fn test_game(board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<(Move, Move)> {
-    let mut output: Vec<(Move, Move)> = Vec::with_capacity(10000);
-    for (legal_move, new_board) in board.get_legal_moves(move_gen_masks) {
-        for (new_legal_move, _) in new_board.get_legal_moves(move_gen_masks) {
-            output.push((legal_move.clone(), new_legal_move));
+fn test_game(
+    board: &Board,
+    move_gen_masks: &MoveGenMasks,
+    depth: u8,
+    max_depth: u8,
+) -> Vec<Vec<Move>> {
+    let mut queue: VecDeque<(u8, Move, Board, Vec<Move>)> = board
+        .get_legal_moves(move_gen_masks)
+        .into_iter()
+        .map(|(x, y)| (depth, x, y, Vec::new()))
+        .collect();
+
+    let mut output: Vec<Vec<Move>> = Vec::with_capacity(100000);
+
+    while let Some((current_depth, current_move, current_board, mut history)) = queue.pop_front() {
+        history.push(current_move);
+
+        if current_depth == max_depth {
+            output.push(history);
+            continue;
+        }
+
+        for (new_move, new_board) in current_board.get_legal_moves(move_gen_masks) {
+            queue.push_back((current_depth + 1, new_move, new_board, history.clone()));
         }
     }
+
     output
 }
 
@@ -64,9 +84,9 @@ mod test_perft {
             Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1")
                 .unwrap();
 
-        let max_depth = 2;
+        let max_depth = 3;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
-        assert_eq!(n_moves, 2039);
+        assert_eq!(n_moves, 97862);
     }
 
     #[test]
@@ -96,10 +116,10 @@ mod test_perft {
         let board =
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
 
-        let max_depth = 1;
+        let max_depth = 2;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
 
-        assert_eq!(n_moves, 44)
+        assert_eq!(n_moves, 1486)
     }
 
     #[test]
@@ -109,12 +129,12 @@ mod test_perft {
         )
         .unwrap();
 
-        let max_depth = 1;
+        let max_depth = 3;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
         // let moves = test_game(&board, &MOVE_GEN_MASKS);
         // save_test_output(moves);
 
-        assert_eq!(n_moves, 46)
+        assert_eq!(n_moves, 89890)
     }
 
     #[test]
