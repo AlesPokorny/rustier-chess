@@ -66,9 +66,19 @@ impl Board {
     pub fn try_move(&self, the_move: &Move) -> Board {
         let origin = the_move.get_origin();
         let destination = the_move.get_destination();
+
         let is_capture = self.colors[self.state.opponent].read_square(&destination);
 
         let mut new_board = *self;
+
+        if let Some(en_passant_square) = self.state.en_passant {
+            if destination == en_passant_square {
+                let square_to_clear = Square::new(origin.get_rank() * 8 + destination.get_file());
+                new_board.pieces[new_board.state.opponent][Pieces::PAWN].set_zero(&square_to_clear);
+                new_board.colors[new_board.state.opponent].set_zero(&square_to_clear);
+            }
+        }
+
         new_board.state.increment_half_move();
         new_board.state.en_passant = None;
 

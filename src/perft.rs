@@ -75,6 +75,7 @@ mod test_perft {
 
         let max_depth = 2;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
+        // save_test_output(test_game(&board, &MOVE_GEN_MASKS));
         assert_eq!(n_moves, 191)
     }
 
@@ -86,7 +87,6 @@ mod test_perft {
 
         let max_depth = 2;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
-        // save_test_output(test_game(&board, &MOVE_GEN_MASKS));
 
         assert_eq!(n_moves, 264)
     }
