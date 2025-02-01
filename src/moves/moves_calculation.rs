@@ -1,9 +1,7 @@
-use crate::bitboard::BitBoard;
+use crate::board::Board;
+use crate::moves::move_mask_gen::MoveGenMasks;
 use crate::moves::moves_utils::Move;
-use crate::piece::Pieces;
-use crate::{board::Board, piece::Color, square::Square};
-
-use super::move_mask_gen::MoveGenMasks;
+use crate::types::{bitboard::BitBoard, piece::Color, piece::Pieces, square::Square};
 
 const CASTLING_WHITE_LONG_CHECKING: BitBoard = BitBoard(0x1C);
 const CASTLING_WHITE_LONG_BLOCKING: BitBoard = BitBoard(0xE);
@@ -271,7 +269,7 @@ pub fn get_all_moves(board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move> 
 mod test_move_calculation {
     use std::str::FromStr;
 
-    use crate::{board::Board, square::Square};
+    use crate::{board::Board, types::square::Square};
 
     use super::*;
 

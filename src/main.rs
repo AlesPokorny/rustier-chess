@@ -1,13 +1,10 @@
 #![allow(dead_code)]
 
-use bitboard::BitBoard;
-mod bitboard;
+use types::bitboard::BitBoard;
 mod board;
 mod moves;
 mod perft;
-mod piece;
-mod square;
-mod state;
+mod types;
 
 // use std::time::Instant;
 
@@ -24,7 +21,10 @@ fn main() {
     // let board = Board::default();
 
     // generate_moves();
-    println!("{}", BitBoard(0x100000000000000));
+    println!("{}", BitBoard(0x000101010101017E));
+    // println!("{}", BitBoard(0x01FE010101010101));
+    // println!("{}", BitBoard(0x007E010101010100_u64.overflowing_mul(0x48FFFE99FECFAA00).0));
+
     // println!("{}", BitBoard(0x1C));
 
     // println!("{:x}", 0b11 << 12);

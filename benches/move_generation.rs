@@ -1,4 +1,3 @@
-
 use std::time::Instant;
 
 use rustier_chess::{board::Board, moves::move_mask_gen::MoveGenMasks, perft::play_game};

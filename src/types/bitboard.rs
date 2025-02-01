@@ -1,3 +1,5 @@
+use crate::types::square::Square;
+use serde_derive::{Deserialize, Serialize};
 use std::{
     fmt,
     ops::{
@@ -5,10 +7,6 @@ use std::{
         ShrAssign,
     },
 };
-
-use serde_derive::{Deserialize, Serialize};
-
-use crate::square::Square;
 
 #[derive(Clone, Copy, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BitBoard(pub u64);

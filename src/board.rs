@@ -6,11 +6,11 @@ use std::str::FromStr;
 use crate::moves::move_mask_gen::MoveGenMasks;
 use crate::moves::moves_calculation::{get_all_moves, is_square_in_check};
 use crate::moves::moves_utils::Move;
-use crate::state::{
+use crate::types::state::{
     BLACK_LONG_ROOK_STARTING_MASK, BLACK_SHORT_ROOK_STARTING_MASK, WHITE_LONG_ROOK_STARTING_MASK,
     WHITE_SHORT_ROOK_STARTING_MASK,
 };
-use crate::{
+use crate::types::{
     bitboard::BitBoard,
     piece::{Color, Piece, Pieces},
     square::Square,

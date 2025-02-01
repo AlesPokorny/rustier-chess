@@ -1,4 +1,4 @@
-use crate::{bitboard::BitBoard, piece::Color, square::Square};
+use crate::types::{bitboard::BitBoard, piece::Color, square::Square};
 
 pub const WHITE_LONG_ROOK_STARTING_MASK: BitBoard = BitBoard(0b1);
 pub const WHITE_SHORT_ROOK_STARTING_MASK: BitBoard = BitBoard(0x80);

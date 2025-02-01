@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-
-use crate::{bitboard::BitBoard, piece::Pieces, square::Square};
-
 use bincode::{deserialize_from, serialize_into};
-
+use std::collections::HashMap;
 use std::fs::File;
+
+use crate::types::{bitboard::BitBoard, piece::Pieces, square::Square};
 
 pub struct MoveGenMasks {
     pub king_moves: Vec<BitBoard>,

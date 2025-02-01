@@ -1,6 +1,5 @@
+use crate::types::{piece::Pieces, square::Square};
 use std::fmt::{self, Display};
-
-use crate::{piece::Pieces, square::Square};
 
 #[derive(Clone, PartialEq, Eq)]
 /// bit 0..5     destination
@@ -66,6 +65,12 @@ impl Move {
 
     pub fn get_promotion_piece(&self) -> usize {
         ((self.0 & 0x3000) >> 12) as usize
+    }
+}
+
+impl Default for Move {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
