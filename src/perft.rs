@@ -53,10 +53,15 @@ fn test_game(
 }
 
 #[cfg(test)]
-fn save_test_output(moves: Vec<(Move, Move)>) {
+fn save_test_output(moves: Vec<Vec<Move>>) {
     let move_strings: Vec<String> = moves
         .into_iter()
-        .map(|(x, y)| format!("{}-{}", x, y))
+        .map(|x| {
+            x.into_iter()
+                .map(|y| y.to_string())
+                .collect::<Vec<String>>()
+                .join("-")
+        })
         .collect();
 
     fs::write("/tmp/test.txt", move_strings.join("\n")).expect("");
@@ -116,10 +121,11 @@ mod test_perft {
         let board =
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
 
-        let max_depth = 2;
+        let max_depth = 3;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
+        save_test_output(test_game(&board, &MOVE_GEN_MASKS, 1, max_depth));
 
-        assert_eq!(n_moves, 1486)
+        assert_eq!(n_moves, 62379)
     }
 
     #[test]
@@ -129,12 +135,11 @@ mod test_perft {
         )
         .unwrap();
 
-        let max_depth = 3;
+        let max_depth = 5;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
-        // let moves = test_game(&board, &MOVE_GEN_MASKS);
-        // save_test_output(moves);
+        // save_test_output( test_game(&board, &MOVE_GEN_MASKS, 1, max_depth));
 
-        assert_eq!(n_moves, 89890)
+        assert_eq!(n_moves, 164075551)
     }
 
     #[test]

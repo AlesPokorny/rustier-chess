@@ -94,7 +94,7 @@ fn get_king_moves(square: &Square, move_gen_masks: &MoveGenMasks, board: &Board)
         .into_iter()
         .map(|new_square| Move::from_origin_and_destination(&new_square, square))
         .collect();
-    moves.append(&mut get_castling_moves(board, move_gen_masks));
+    moves.append(&mut get_castling_moves(square, board, move_gen_masks));
 
     moves
 }
@@ -140,7 +140,7 @@ fn get_queen_moves(square: &Square, board: &Board, move_gen_masks: &MoveGenMasks
     moves
 }
 
-fn get_castling_moves(board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move> {
+fn get_castling_moves(square: &Square, board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move> {
     let (can_short, can_long) = board.state.castling.can_castle(board.state.turn);
     let mut castling_moves: Vec<Move> = Vec::with_capacity(1);
     if can_short {
@@ -153,7 +153,8 @@ fn get_castling_moves(board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move>
             & mask
                 .get_ones()
                 .iter()
-                .all(|square| !is_square_in_check(square, board, move_gen_masks))
+                .all(|square_to_check| !is_square_in_check(square_to_check, board, move_gen_masks))
+            & !is_square_in_check(square, board, move_gen_masks)
         {
             let (origin, destination) = if board.state.turn == Color::WHITE {
                 (Square::new(4), Square::new(6))
@@ -176,7 +177,8 @@ fn get_castling_moves(board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move>
             & mask
                 .get_ones()
                 .iter()
-                .all(|square| !is_square_in_check(square, board, move_gen_masks))
+                .all(|square_to_check| !is_square_in_check(square_to_check, board, move_gen_masks))
+            & !is_square_in_check(square, board, move_gen_masks)
         {
             let (origin, destination) = if board.state.turn == Color::WHITE {
                 (Square::new(4), Square::new(2))
@@ -333,8 +335,9 @@ mod test_move_calculation {
         )
         .unwrap();
         let move_gen_masks = MoveGenMasks::load();
+        let king_square = board.pieces[Color::BLACK][Pieces::KING].get_one();
 
-        let moves = get_castling_moves(&board, &move_gen_masks);
+        let moves = get_castling_moves(&king_square, &board, &move_gen_masks);
         let expected_from = Square::from_str("e8").unwrap();
         let expected_to = Square::from_str("g8").unwrap();
         assert_eq!(moves.len(), 1);
@@ -351,8 +354,9 @@ mod test_move_calculation {
         )
         .unwrap();
         let move_gen_masks = MoveGenMasks::load();
+        let king_square = board.pieces[Color::WHITE][Pieces::KING].get_one();
 
-        let moves = get_castling_moves(&board, &move_gen_masks);
+        let moves = get_castling_moves(&king_square, &board, &move_gen_masks);
         assert_eq!(moves.len(), 2);
         let short = moves.first().unwrap();
         assert_eq!(short.get_destination(), Square::from_str("g1").unwrap());

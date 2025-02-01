@@ -71,16 +71,9 @@ impl Board {
 
         let mut new_board = *self;
 
-        if let Some(en_passant_square) = self.state.en_passant {
-            if destination == en_passant_square {
-                let square_to_clear = Square::new(origin.get_rank() * 8 + destination.get_file());
-                new_board.pieces[new_board.state.opponent][Pieces::PAWN].set_zero(&square_to_clear);
-                new_board.colors[new_board.state.opponent].set_zero(&square_to_clear);
-            }
-        }
-
         new_board.state.increment_half_move();
-        new_board.state.en_passant = None;
+
+        let mut moving_piece_type = 10;
 
         new_board.colors[new_board.state.turn].set_zero(&origin);
         new_board.colors[new_board.state.turn].set_one(&destination);
@@ -89,6 +82,7 @@ impl Board {
             .enumerate()
         {
             if piece_bitboard.read_square(&origin) {
+                moving_piece_type = piece_type;
                 piece_bitboard.set_zero(&origin);
                 piece_bitboard.set_one(&destination);
                 if piece_type == Pieces::PAWN {
@@ -97,6 +91,14 @@ impl Board {
                 break;
             }
         }
+
+        // if let Some(en_passant_square) = self.state.en_passant {
+        //     if destination == en_passant_square {
+        //         let square_to_clear = Square::new(origin.get_rank() * 8 + destination.get_file());
+        //         new_board.pieces[new_board.state.opponent][Pieces::PAWN].set_zero(&square_to_clear);
+        //         new_board.colors[new_board.state.opponent].set_zero(&square_to_clear);
+        //     }
+        // }
 
         if is_capture {
             new_board.colors[new_board.state.opponent].set_zero(&destination);
@@ -109,11 +111,13 @@ impl Board {
             new_board.state.reset_half_move();
         } else if let Some(en_passant_square) = new_board.state.en_passant {
             // is en_passant capture
-            if destination == en_passant_square {
+            if destination == en_passant_square && moving_piece_type == Pieces::PAWN {
                 let capture_square = Square::new(origin.get_rank() * 8 + destination.get_file());
                 new_board.clear_piece(&capture_square, Pieces::PAWN, new_board.state.turn);
             }
         }
+
+        new_board.state.en_passant = None;
 
         match the_move.special_move() {
             0 => (),
