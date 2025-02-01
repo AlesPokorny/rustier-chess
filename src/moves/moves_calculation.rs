@@ -24,7 +24,7 @@ pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
 
     if !(board.colors[0] | board.colors[1]).read_square(&new_square) {
         let new_move = Move::from_origin_and_destination(&new_square, &square);
-        if !(1..6).contains(&new_square.get_rank()) {
+        if !(1..=6).contains(&new_square.get_rank()) {
             for piece in PROMOTION_PIECES {
                 let mut promotion_move = new_move.clone();
                 promotion_move.set_promotion(piece);
@@ -60,7 +60,7 @@ pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
             | board.check_en_passant(&attacking_square)
         {
             let new_move = Move::from_origin_and_destination(&attacking_square, &square);
-            if !(1..6).contains(&attacking_square_rank) {
+            if !(1..=6).contains(&attacking_square_rank) {
                 for piece in PROMOTION_PIECES {
                     let mut promotion_move = new_move.clone();
                     promotion_move.set_promotion(piece);
