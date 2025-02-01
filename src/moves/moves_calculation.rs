@@ -5,9 +5,11 @@ use crate::{board::Board, piece::Color, square::Square};
 
 use super::move_mask_gen::MoveGenMasks;
 
-const CASTLING_WHITE_LONG: BitBoard = BitBoard(0xC);
+const CASTLING_WHITE_LONG_CHECKING: BitBoard = BitBoard(0x1C);
+const CASTLING_WHITE_LONG_BLOCKING: BitBoard = BitBoard(0xE);
 const CASTLING_WHITE_SHORT: BitBoard = BitBoard(0x60);
-const CASTLING_BLACK_LONG: BitBoard = BitBoard(0xC00000000000000);
+const CASTLING_BLACK_LONG_CHECKING: BitBoard = BitBoard(0x1C00000000000000);
+const CASTLING_BLACK_LONG_BLOCKING: BitBoard = BitBoard(0xE00000000000000);
 const CASTLING_BLACK_SHORT: BitBoard = BitBoard(0x6000000000000000);
 const PROMOTION_PIECES: [usize; 4] = [Pieces::QUEEN, Pieces::KNIGHT, Pieces::ROOK, Pieces::BISHOP];
 
@@ -168,17 +170,17 @@ fn get_castling_moves(square: &Square, board: &Board, move_gen_masks: &MoveGenMa
     }
 
     if can_long {
-        let mask = if board.state.turn == Color::WHITE {
-            CASTLING_WHITE_LONG
+        let (checking_mask, blocking_mask) = if board.state.turn == Color::WHITE {
+            (CASTLING_WHITE_LONG_CHECKING, CASTLING_WHITE_LONG_BLOCKING)
         } else {
-            CASTLING_BLACK_LONG
+            (CASTLING_BLACK_LONG_CHECKING, CASTLING_BLACK_LONG_BLOCKING)
         };
-        if (mask & board.all_pieces).is_empty()
-            & mask
+
+        if (blocking_mask & board.all_pieces).is_empty()
+            & checking_mask
                 .get_ones()
                 .iter()
                 .all(|square_to_check| !is_square_in_check(square_to_check, board, move_gen_masks))
-            & !is_square_in_check(square, board, move_gen_masks)
         {
             let (origin, destination) = if board.state.turn == Color::WHITE {
                 (Square::new(4), Square::new(2))
@@ -330,21 +332,23 @@ mod test_move_calculation {
 
     #[test]
     fn test_get_castling_moves_black() {
-        let board = Board::from_fen(
-            "r1b1k2r/pppq1ppp/2np1n2/2b1p3/4P3/1PNB1N2/PBPPQPPP/R3K2R b KQkq - 5 7",
-        )
-        .unwrap();
+        let board =
+            Board::from_fen("r3k2r/pbpq1ppp/1pnp1n2/2b1p3/4P3/1PNB1N2/PBPPQPPP/R3K2R b KQkq - 3 9")
+                .unwrap();
         let move_gen_masks = MoveGenMasks::load();
         let king_square = board.pieces[Color::BLACK][Pieces::KING].get_one();
 
         let moves = get_castling_moves(&king_square, &board, &move_gen_masks);
-        let expected_from = Square::from_str("e8").unwrap();
-        let expected_to = Square::from_str("g8").unwrap();
-        assert_eq!(moves.len(), 1);
-        let the_move = moves.first().unwrap();
-        assert_eq!(the_move.get_destination(), expected_to);
-        assert_eq!(the_move.get_origin(), expected_from);
-        assert!(the_move.special_move() == 3);
+        assert_eq!(moves.len(), 2);
+        let short = moves.first().unwrap();
+        assert_eq!(short.get_destination().to_string(), "g8");
+        assert_eq!(short.get_origin().to_string(), "e8");
+        assert!(short.special_move() == 3);
+
+        let long = moves.get(1).unwrap();
+        assert_eq!(long.get_destination().to_string(), "c8");
+        assert_eq!(long.get_origin().to_string(), "e8");
+        assert!(short.special_move() == 3);
     }
 
     #[test]
@@ -359,13 +363,13 @@ mod test_move_calculation {
         let moves = get_castling_moves(&king_square, &board, &move_gen_masks);
         assert_eq!(moves.len(), 2);
         let short = moves.first().unwrap();
-        assert_eq!(short.get_destination(), Square::from_str("g1").unwrap());
-        assert_eq!(short.get_origin(), Square::from_str("e1").unwrap());
+        assert_eq!(short.get_destination().to_string(), "g1");
+        assert_eq!(short.get_origin().to_string(), "e1");
         assert!(short.special_move() == 3);
 
         let long = moves.get(1).unwrap();
-        assert_eq!(long.get_destination(), Square::from_str("c1").unwrap());
-        assert_eq!(long.get_origin(), Square::from_str("e1").unwrap());
+        assert_eq!(long.get_destination().to_string(), "c1");
+        assert_eq!(long.get_origin().to_string(), "e1");
         assert!(short.special_move() == 3);
     }
 

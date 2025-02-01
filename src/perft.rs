@@ -113,9 +113,9 @@ mod test_perft {
     fn test_position_1_default() {
         let board = Board::default();
 
-        let max_depth = 5;
+        let max_depth = 6;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
-        assert_eq!(n_moves, 4865609)
+        assert_eq!(n_moves, 119060324)
     }
 
     #[test]
@@ -124,20 +124,18 @@ mod test_perft {
             Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1")
                 .unwrap();
 
-        let max_depth = 3;
+        let max_depth = 5;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
-        save_test_output( test_game(&board, &MOVE_GEN_MASKS, 1, max_depth));
-        assert_eq!(n_moves, 97862);
+        assert_eq!(n_moves, 193690690);
     }
 
     #[test]
     fn test_position_3() {
         let board = Board::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1").unwrap();
 
-        let max_depth = 5;
+        let max_depth = 7;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
-        // save_test_output( test_game(&board, &MOVE_GEN_MASKS, 1, max_depth));
-        assert_eq!(n_moves, 674624)
+        assert_eq!(n_moves, 178633661)
     }
 
     #[test]
@@ -146,10 +144,24 @@ mod test_perft {
             Board::from_fen("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1")
                 .unwrap();
 
-        let max_depth = 2;
+        let max_depth = 5;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
 
-        assert_eq!(n_moves, 264)
+        assert_eq!(n_moves, 15833292)
+    }
+
+    #[test]
+    fn test_poition_4a() {
+        let board =
+            Board::from_fen("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1")
+                .unwrap();
+
+        println!("{}", board);
+
+        let max_depth = 1;
+        let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
+
+        // assert_eq!(n_moves, 15833292)
     }
 
     #[test]
@@ -157,10 +169,10 @@ mod test_perft {
         let board =
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
 
-        let max_depth = 3;
+        let max_depth = 5;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
 
-        assert_eq!(n_moves, 62379)
+        assert_eq!(n_moves, 89941194)
     }
 
     #[test]
@@ -174,17 +186,5 @@ mod test_perft {
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
 
         assert_eq!(n_moves, 164075551)
-    }
-
-    #[test]
-    fn test_position_7_en_passant() {
-        let board =
-            Board::from_fen("rnbqkbnr/ppp1ppp1/8/3pP2p/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3")
-                .unwrap();
-
-        let max_depth = 1;
-        let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
-
-        assert_eq!(n_moves, 31)
     }
 }

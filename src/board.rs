@@ -166,17 +166,18 @@ impl Board {
                 .is_empty()
             {
                 new_board.state.castling.remove_white_long();
-            } else if (new_board.pieces[Color::WHITE][Pieces::ROOK]
-                & WHITE_SHORT_ROOK_STARTING_MASK)
+            }
+            if (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_SHORT_ROOK_STARTING_MASK)
                 .is_empty()
             {
                 new_board.state.castling.remove_white_short();
-            } else if (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_LONG_ROOK_STARTING_MASK)
+            }
+            if (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_LONG_ROOK_STARTING_MASK)
                 .is_empty()
             {
                 new_board.state.castling.remove_black_long();
-            } else if (new_board.pieces[Color::BLACK][Pieces::ROOK]
-                & BLACK_SHORT_ROOK_STARTING_MASK)
+            }
+            if (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_SHORT_ROOK_STARTING_MASK)
                 .is_empty()
             {
                 new_board.state.castling.remove_black_short();
