@@ -52,6 +52,41 @@ fn test_game(
     output
 }
 
+// #[cfg(test)]
+// fn aaa(
+//     board: &Board,
+//     move_gen_masks: &MoveGenMasks,
+//     depth: u8,
+//     max_depth: u8,
+// ) {
+//     let mut queue: VecDeque<(u8, Move, Board, Vec<(Move, Board)>)> = board
+//         .get_legal_moves(move_gen_masks)
+//         .into_iter()
+//         .map(|(x, y)| (depth, x, y, Vec::new()))
+//         .collect();
+
+//     let mut output: Vec<Vec<(Move, Board)>> = Vec::with_capacity(100000);
+
+//     while let Some((current_depth, current_move, current_board, mut history)) = queue.pop_front() {
+//         history.push((current_move, current_board));
+
+//         if current_depth == max_depth {
+//             output.push(history);
+//             continue;
+//         }
+
+//         for (new_move, new_board) in current_board.get_legal_moves(move_gen_masks) {
+//             queue.push_back((current_depth + 1, new_move, new_board, history.clone()));
+//         }
+//     }
+
+//     output.into_iter().map(
+//         |history| {
+//             if history[0].to_string() == ""
+//         }
+//     );
+// }
+
 #[cfg(test)]
 fn save_test_output(moves: Vec<Vec<Move>>) {
     let move_strings: Vec<String> = moves
@@ -123,7 +158,6 @@ mod test_perft {
 
         let max_depth = 3;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
-        save_test_output(test_game(&board, &MOVE_GEN_MASKS, 1, max_depth));
 
         assert_eq!(n_moves, 62379)
     }

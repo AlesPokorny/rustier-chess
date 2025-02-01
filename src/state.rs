@@ -1,4 +1,9 @@
-use crate::{piece::Color, square::Square};
+use crate::{bitboard::BitBoard, piece::Color, square::Square};
+
+pub const WHITE_LONG_ROOK_STARTING_MASK: BitBoard = BitBoard(0b1);
+pub const WHITE_SHORT_ROOK_STARTING_MASK: BitBoard = BitBoard(0x80);
+pub const BLACK_LONG_ROOK_STARTING_MASK: BitBoard = BitBoard(0x100000000000000);
+pub const BLACK_SHORT_ROOK_STARTING_MASK: BitBoard = BitBoard(0x8000000000000000);
 
 /// bit 0:      white short
 /// bit 1:      white long
@@ -77,6 +82,26 @@ impl Castling {
 
     pub fn remove_black_long(&mut self) {
         self.set_zero(3)
+    }
+
+    pub fn remove_color_castling(&mut self, color: usize) {
+        if color == Color::WHITE {
+            self.0 &= !0b11;
+        } else {
+            self.0 &= !0b1100;
+        }
+    }
+
+    pub fn can_color_castle(&self, color: usize) -> bool {
+        if color == Color::WHITE {
+            self.0 & 0b11 != 0
+        } else {
+            self.0 & 0b1100 != 0
+        }
+    }
+
+    pub fn can_someone_castle(&self) -> bool {
+        self.0 != 0
     }
 
     /// return (short, long) tuple

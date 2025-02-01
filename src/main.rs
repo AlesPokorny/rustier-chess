@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use bitboard::BitBoard;
+
 mod bitboard;
 mod board;
 mod moves;
@@ -23,8 +25,6 @@ fn main() {
     // let board = Board::default();
 
     // generate_moves();
-
-    println!("{:b}", 0x4000); // 1 << 14
 
     // println!("{:x}", 0b11 << 12);
     // println!("{:x}", 0b111111000000);

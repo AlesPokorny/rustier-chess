@@ -6,6 +6,10 @@ use std::str::FromStr;
 use crate::moves::move_mask_gen::MoveGenMasks;
 use crate::moves::moves_calculation::{get_all_moves, is_square_in_check};
 use crate::moves::moves_utils::Move;
+use crate::state::{
+    BLACK_LONG_ROOK_STARTING_MASK, BLACK_SHORT_ROOK_STARTING_MASK, WHITE_LONG_ROOK_STARTING_MASK,
+    WHITE_SHORT_ROOK_STARTING_MASK,
+};
 use crate::{
     bitboard::BitBoard,
     piece::{Color, Piece, Pieces},
@@ -92,14 +96,6 @@ impl Board {
             }
         }
 
-        // if let Some(en_passant_square) = self.state.en_passant {
-        //     if destination == en_passant_square {
-        //         let square_to_clear = Square::new(origin.get_rank() * 8 + destination.get_file());
-        //         new_board.pieces[new_board.state.opponent][Pieces::PAWN].set_zero(&square_to_clear);
-        //         new_board.colors[new_board.state.opponent].set_zero(&square_to_clear);
-        //     }
-        // }
-
         if is_capture {
             new_board.colors[new_board.state.opponent].set_zero(&destination);
             for piece_bitboard in new_board.pieces[new_board.state.opponent].iter_mut() {
@@ -163,6 +159,39 @@ impl Board {
                 );
             }
             _ => panic!("Boom, invalid special move"),
+        }
+
+        if new_board.state.castling.can_someone_castle() {
+            if (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_LONG_ROOK_STARTING_MASK)
+                .is_empty()
+            {
+                new_board.state.castling.remove_white_long();
+            } else if (new_board.pieces[Color::WHITE][Pieces::ROOK]
+                & WHITE_SHORT_ROOK_STARTING_MASK)
+                .is_empty()
+            {
+                new_board.state.castling.remove_white_short();
+            } else if (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_LONG_ROOK_STARTING_MASK)
+                .is_empty()
+            {
+                new_board.state.castling.remove_black_long();
+            } else if (new_board.pieces[Color::BLACK][Pieces::ROOK]
+                & BLACK_SHORT_ROOK_STARTING_MASK)
+                .is_empty()
+            {
+                new_board.state.castling.remove_black_short();
+            }
+            if new_board
+                .state
+                .castling
+                .can_color_castle(new_board.state.turn)
+                && moving_piece_type == Pieces::KING
+            {
+                new_board
+                    .state
+                    .castling
+                    .remove_color_castling(new_board.state.turn);
+            }
         }
 
         new_board.sync_all_pieces();
