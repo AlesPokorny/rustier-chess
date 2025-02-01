@@ -96,12 +96,6 @@ impl Display for Move {
             ""
         };
 
-        write!(
-            f,
-            "{}{}{}",
-            self.get_origin(),
-            self.get_destination(),
-            promotion_str,
-        )
+        write!(f, "{}{}{}", self.get_origin(), self.get_destination(), promotion_str,)
     }
 }

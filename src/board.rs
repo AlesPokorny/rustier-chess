@@ -31,13 +31,7 @@ impl Board {
         self.pieces[color][piece].set_zero(square);
     }
 
-    pub fn move_piece(
-        &mut self,
-        origin: &Square,
-        destination: &Square,
-        piece: usize,
-        color: usize,
-    ) {
+    pub fn move_piece(&mut self, origin: &Square, destination: &Square, piece: usize, color: usize) {
         self.colors[color].set_one(destination);
         self.pieces[color][piece].set_one(destination);
         self.clear_piece(origin, piece, color);
@@ -81,10 +75,7 @@ impl Board {
 
         new_board.colors[new_board.state.turn].set_zero(&origin);
         new_board.colors[new_board.state.turn].set_one(&destination);
-        for (piece_type, piece_bitboard) in new_board.pieces[new_board.state.turn]
-            .iter_mut()
-            .enumerate()
-        {
+        for (piece_type, piece_bitboard) in new_board.pieces[new_board.state.turn].iter_mut().enumerate() {
             if piece_bitboard.read_square(&origin) {
                 moving_piece_type = piece_type;
                 piece_bitboard.set_zero(&origin);
@@ -121,8 +112,7 @@ impl Board {
                 // 1 promotion
                 new_board.clear_piece(&origin, Pieces::PAWN, new_board.state.turn);
                 new_board.clear_piece(&destination, Pieces::PAWN, new_board.state.turn);
-                new_board.pieces[new_board.state.turn][the_move.get_promotion_piece()]
-                    .set_one(&destination);
+                new_board.pieces[new_board.state.turn][the_move.get_promotion_piece()].set_one(&destination);
                 new_board.colors[new_board.state.turn].set_one(&destination);
             }
             2 => {
@@ -151,47 +141,26 @@ impl Board {
                 let rank = origin.get_rank() * 8;
                 let rook_origin = Square::new(rank + rook_origin_file);
                 let rook_destination = Square::new(rank + rook_destination_file);
-                new_board.move_piece(
-                    &rook_origin,
-                    &rook_destination,
-                    Pieces::ROOK,
-                    new_board.state.turn,
-                );
+                new_board.move_piece(&rook_origin, &rook_destination, Pieces::ROOK, new_board.state.turn);
             }
             _ => panic!("Boom, invalid special move"),
         }
 
         if new_board.state.castling.can_someone_castle() {
-            if (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_LONG_ROOK_STARTING_MASK)
-                .is_empty()
-            {
+            if (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_LONG_ROOK_STARTING_MASK).is_empty() {
                 new_board.state.castling.remove_white_long();
             }
-            if (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_SHORT_ROOK_STARTING_MASK)
-                .is_empty()
-            {
+            if (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_SHORT_ROOK_STARTING_MASK).is_empty() {
                 new_board.state.castling.remove_white_short();
             }
-            if (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_LONG_ROOK_STARTING_MASK)
-                .is_empty()
-            {
+            if (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_LONG_ROOK_STARTING_MASK).is_empty() {
                 new_board.state.castling.remove_black_long();
             }
-            if (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_SHORT_ROOK_STARTING_MASK)
-                .is_empty()
-            {
+            if (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_SHORT_ROOK_STARTING_MASK).is_empty() {
                 new_board.state.castling.remove_black_short();
             }
-            if new_board
-                .state
-                .castling
-                .can_color_castle(new_board.state.turn)
-                && moving_piece_type == Pieces::KING
-            {
-                new_board
-                    .state
-                    .castling
-                    .remove_color_castling(new_board.state.turn);
+            if new_board.state.castling.can_color_castle(new_board.state.turn) && moving_piece_type == Pieces::KING {
+                new_board.state.castling.remove_color_castling(new_board.state.turn);
             }
         }
 
@@ -344,21 +313,9 @@ impl Board {
             Err(_) => return Err("Invalid full move string")?,
         };
 
-        let state = State {
-            castling,
-            en_passant,
-            half_moves,
-            full_moves,
-            turn,
-            opponent,
-        };
+        let state = State { castling, en_passant, half_moves, full_moves, turn, opponent };
 
-        let board = Self {
-            colors,
-            pieces,
-            all_pieces,
-            state,
-        };
+        let board = Self { colors, pieces, all_pieces, state };
 
         Ok(board)
     }

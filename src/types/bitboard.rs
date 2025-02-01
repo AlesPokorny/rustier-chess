@@ -2,10 +2,7 @@ use crate::types::square::Square;
 use serde_derive::{Deserialize, Serialize};
 use std::{
     fmt,
-    ops::{
-        BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
-        ShrAssign,
-    },
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr, ShrAssign},
 };
 
 #[derive(Clone, Copy, Hash, Serialize, Deserialize, PartialEq, Eq)]
@@ -89,11 +86,7 @@ impl fmt::Display for BitBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for i in 0..8_u8 {
             for j in 0..8_u8 {
-                write!(
-                    f,
-                    "{}",
-                    self.read_square(&Square::new(56 - i * 8 + j)) as u8
-                )?;
+                write!(f, "{}", self.read_square(&Square::new(56 - i * 8 + j)) as u8)?;
             }
             writeln!(f)?;
         }
@@ -237,10 +230,7 @@ mod test_bitboard {
         let bitboard = BitBoard::new(5);
 
         let zeros = bitboard.get_zeros();
-        let expected_result: Vec<Square> = (0..64)
-            .filter(|x| ![0, 2].contains(x))
-            .map(Square::new)
-            .collect();
+        let expected_result: Vec<Square> = (0..64).filter(|x| ![0, 2].contains(x)).map(Square::new).collect();
 
         assert_eq!(zeros, expected_result);
     }

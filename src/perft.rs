@@ -20,12 +20,7 @@ pub fn play_game(board: &Board, move_gen_masks: &MoveGenMasks, depth: u8, max_de
 }
 
 #[cfg(test)]
-fn test_game(
-    board: &Board,
-    move_gen_masks: &MoveGenMasks,
-    depth: u8,
-    max_depth: u8,
-) -> Vec<Vec<Move>> {
+fn test_game(board: &Board, move_gen_masks: &MoveGenMasks, depth: u8, max_depth: u8) -> Vec<Vec<Move>> {
     let mut queue: VecDeque<(u8, Move, Board, Vec<Move>)> = board
         .get_legal_moves(move_gen_masks)
         .into_iter()
@@ -54,12 +49,7 @@ fn test_game(
 fn save_test_output(moves: Vec<Vec<Move>>) {
     let move_strings: Vec<String> = moves
         .into_iter()
-        .map(|x| {
-            x.into_iter()
-                .map(|y| y.to_string())
-                .collect::<Vec<String>>()
-                .join("-")
-        })
+        .map(|x| x.into_iter().map(|y| y.to_string()).collect::<Vec<String>>().join("-"))
         .collect();
 
     fs::write("/tmp/test.txt", move_strings.join("\n")).expect("");
@@ -83,9 +73,7 @@ mod test_perft {
 
     #[test]
     fn test_position_2_kiwipete() {
-        let board =
-            Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1")
-                .unwrap();
+        let board = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1").unwrap();
 
         let max_depth = 5;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
@@ -103,9 +91,7 @@ mod test_perft {
 
     #[test]
     fn test_poition_4() {
-        let board =
-            Board::from_fen("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1")
-                .unwrap();
+        let board = Board::from_fen("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1").unwrap();
 
         let max_depth = 5;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
@@ -115,11 +101,7 @@ mod test_perft {
 
     #[test]
     fn test_poition_4a() {
-        let board =
-            Board::from_fen("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1")
-                .unwrap();
-
-        println!("{}", board);
+        let board = Board::from_fen("r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1").unwrap();
 
         let max_depth = 5;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
@@ -129,8 +111,7 @@ mod test_perft {
 
     #[test]
     fn test_position_5() {
-        let board =
-            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
+        let board = Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
 
         let max_depth = 5;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
@@ -140,10 +121,8 @@ mod test_perft {
 
     #[test]
     fn test_position_6() {
-        let board = Board::from_fen(
-            "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
-        )
-        .unwrap();
+        let board =
+            Board::from_fen("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10").unwrap();
 
         let max_depth = 5;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
