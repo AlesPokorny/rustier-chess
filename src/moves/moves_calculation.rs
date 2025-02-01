@@ -52,17 +52,18 @@ pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
         }
     }
 
-    for offset in [7, 9] {
-        let attacking_square = square + direction * offset;
-        let attacking_square_rank = attacking_square.get_rank();
-        if (square.get_rank() as i8 - attacking_square_rank as i8).abs() != 1 {
+    for offset in [1, -1] {
+        let new_rank = square.get_rank() as i8 + direction;
+        let new_file = square.get_file() as i8 + offset;
+        if !(0..=7).contains(&new_file) {
             continue;
         }
+        let attacking_square = Square::new((new_rank * 8 + new_file) as u8);
         if board.colors[board.state.opponent].read_square(&attacking_square)
             | board.check_en_passant(&attacking_square)
         {
             let new_move = Move::from_origin_and_destination(&attacking_square, &square);
-            if !(1..=6).contains(&attacking_square_rank) {
+            if !(1..=6).contains(&new_rank) {
                 for piece in PROMOTION_PIECES {
                     let mut promotion_move = new_move.clone();
                     promotion_move.set_promotion(piece);
