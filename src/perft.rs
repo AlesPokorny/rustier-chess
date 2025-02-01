@@ -1,11 +1,11 @@
+use crate::{board::Board, moves::move_mask_gen::MoveGenMasks};
+
 #[cfg(test)]
 use {
-    crate::board::Board, crate::moves::move_mask_gen::MoveGenMasks,
     crate::moves::moves_utils::Move, std::collections::VecDeque, std::fs,
 };
 
-#[cfg(test)]
-fn play_game(board: &Board, move_gen_masks: &MoveGenMasks, depth: u8, max_depth: u8) -> usize {
+pub fn play_game(board: &Board, move_gen_masks: &MoveGenMasks, depth: u8, max_depth: u8) -> usize {
     let legal_moves = board.get_legal_moves(move_gen_masks);
 
     if depth == max_depth {
