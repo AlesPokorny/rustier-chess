@@ -109,7 +109,7 @@ impl Board {
             // is en_passant capture
             if destination == en_passant_square && moving_piece_type == Pieces::PAWN {
                 let capture_square = Square::new(origin.get_rank() * 8 + destination.get_file());
-                new_board.clear_piece(&capture_square, Pieces::PAWN, new_board.state.turn);
+                new_board.clear_piece(&capture_square, Pieces::PAWN, new_board.state.opponent);
             }
         }
 

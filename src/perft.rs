@@ -126,6 +126,7 @@ mod test_perft {
 
         let max_depth = 3;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
+        // save_test_output( test_game(&board, &MOVE_GEN_MASKS, 1, max_depth));
         assert_eq!(n_moves, 97862);
     }
 
@@ -133,10 +134,10 @@ mod test_perft {
     fn test_position_3() {
         let board = Board::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1").unwrap();
 
-        let max_depth = 2;
+        let max_depth = 3;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
-        // save_test_output(test_game(&board, &MOVE_GEN_MASKS));
-        assert_eq!(n_moves, 191)
+        // save_test_output( test_game(&board, &MOVE_GEN_MASKS, 1, max_depth));
+        assert_eq!(n_moves, 2812)
     }
 
     #[test]
@@ -171,7 +172,6 @@ mod test_perft {
 
         let max_depth = 5;
         let n_moves = play_game(&board, &MOVE_GEN_MASKS, 1, max_depth);
-        // save_test_output( test_game(&board, &MOVE_GEN_MASKS, 1, max_depth));
 
         assert_eq!(n_moves, 164075551)
     }
