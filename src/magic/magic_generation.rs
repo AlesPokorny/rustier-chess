@@ -105,21 +105,3 @@ pub fn find_all_magics(piece: usize, timeout_seconds: u64) -> Vec<(u8, u64, u8)>
         .collect_into_vec(&mut output);
     output
 }
-
-// #[cfg(test)]
-// mod test_magics {
-//     use crate::{magic::magics::ROOK_MAGICS, moves::move_mask_gen::generate_rook_moves, types::square::Square};
-
-//     use super::Magic;
-
-//     // #[test]
-//     // fn test_rook_magics() {
-//     //     for i in 0..64 {
-//     //         let square = Square::new(i);
-//     //         let (mask, moves) = generate_rook_moves(&square);
-//     //         let (magic_value, shift) = ROOK_MAGICS[square.as_usize()];
-//     //         let magic = Magic::new(mask, magic_value, shift);
-//     //         let a = generate_rook_moves(&square);
-//     //     }
-//     // }
-// }
