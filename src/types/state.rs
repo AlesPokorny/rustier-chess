@@ -5,6 +5,12 @@ pub const WHITE_SHORT_ROOK_STARTING_MASK: BitBoard = BitBoard(0x80);
 pub const BLACK_LONG_ROOK_STARTING_MASK: BitBoard = BitBoard(0x100000000000000);
 pub const BLACK_SHORT_ROOK_STARTING_MASK: BitBoard = BitBoard(0x8000000000000000);
 
+#[derive(PartialEq, Eq)]
+pub enum CastlingSide {
+    Short,
+    Long,
+}
+
 /// bit 0:      white short
 /// bit 1:      white long
 /// bit 2:      black short

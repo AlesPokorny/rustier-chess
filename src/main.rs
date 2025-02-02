@@ -5,5 +5,6 @@ mod magic;
 mod moves;
 mod perft;
 mod types;
+mod utils;
 
 fn main() {}

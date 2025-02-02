@@ -7,7 +7,7 @@ use crate::moves::move_mask_gen::MoveGenMasks;
 use crate::moves::moves_calculation::{get_all_moves, is_square_in_check};
 use crate::moves::moves_utils::Move;
 use crate::types::state::{
-    BLACK_LONG_ROOK_STARTING_MASK, BLACK_SHORT_ROOK_STARTING_MASK, WHITE_LONG_ROOK_STARTING_MASK,
+    CastlingSide, BLACK_LONG_ROOK_STARTING_MASK, BLACK_SHORT_ROOK_STARTING_MASK, WHITE_LONG_ROOK_STARTING_MASK,
     WHITE_SHORT_ROOK_STARTING_MASK,
 };
 use crate::types::{
@@ -16,6 +16,7 @@ use crate::types::{
     square::Square,
     state::{Castling, State},
 };
+use crate::utils::zobrist::{ZobristHash, ZobristHasher};
 
 #[derive(Clone, Copy)]
 pub struct Board {
@@ -41,11 +42,11 @@ impl Board {
         self.all_pieces = self.colors[0] | self.colors[1];
     }
 
-    pub fn get_legal_moves(&self, move_gen_masks: &MoveGenMasks) -> Vec<(Move, Board)> {
+    pub fn get_legal_moves(&self, move_gen_masks: &MoveGenMasks, hasher: &ZobristHasher) -> Vec<(Move, Board)> {
         let all_moves: Vec<(Move, Board)> = get_all_moves(self, move_gen_masks)
             .into_iter()
             .filter_map(|the_move| {
-                let mut new_board = self.try_move(&the_move);
+                let (mut new_board, _) = self.try_move(&the_move, hasher);
                 if !is_square_in_check(
                     &new_board.pieces[new_board.state.turn][Pieces::KING].get_one(),
                     &new_board,
@@ -61,9 +62,10 @@ impl Board {
         all_moves
     }
 
-    pub fn try_move(&self, the_move: &Move) -> Board {
+    pub fn try_move(&self, the_move: &Move, hasher: &ZobristHasher) -> (Board, ZobristHash) {
         let origin = the_move.get_origin();
         let destination = the_move.get_destination();
+        let mut move_hash = ZobristHash::new(0_u64);
 
         let is_capture = self.colors[self.state.opponent].read_square(&destination);
 
@@ -77,6 +79,8 @@ impl Board {
         new_board.colors[new_board.state.turn].set_one(&destination);
         for (piece_type, piece_bitboard) in new_board.pieces[new_board.state.turn].iter_mut().enumerate() {
             if piece_bitboard.read_square(&origin) {
+                move_hash ^= hasher.hash_piece_at_square(&piece_type, &new_board.state.turn, &origin);
+                move_hash ^= hasher.hash_piece_at_square(&piece_type, &new_board.state.turn, &destination);
                 moving_piece_type = piece_type;
                 piece_bitboard.set_zero(&origin);
                 piece_bitboard.set_one(&destination);
@@ -89,9 +93,10 @@ impl Board {
 
         if is_capture {
             new_board.colors[new_board.state.opponent].set_zero(&destination);
-            for piece_bitboard in new_board.pieces[new_board.state.opponent].iter_mut() {
+            for (piece_type, piece_bitboard) in new_board.pieces[new_board.state.opponent].iter_mut().enumerate() {
                 if piece_bitboard.read_square(&destination) {
                     piece_bitboard.set_zero(&destination);
+                    move_hash ^= hasher.hash_piece_at_square(&piece_type, &new_board.state.opponent, &destination);
                     break;
                 }
             }
@@ -101,9 +106,11 @@ impl Board {
             if destination == en_passant_square && moving_piece_type == Pieces::PAWN {
                 let capture_square = Square::new(origin.get_rank() * 8 + destination.get_file());
                 new_board.clear_piece(&capture_square, Pieces::PAWN, new_board.state.opponent);
+                move_hash ^= hasher.hash_piece_at_square(&Pieces::PAWN, &new_board.state.opponent, &capture_square);
             }
         }
 
+        move_hash ^= hasher.hash_en_passant(&new_board);
         new_board.state.en_passant = None;
 
         match the_move.special_move() {
@@ -112,6 +119,8 @@ impl Board {
                 // 1 promotion
                 new_board.clear_piece(&origin, Pieces::PAWN, new_board.state.turn);
                 new_board.clear_piece(&destination, Pieces::PAWN, new_board.state.turn);
+                move_hash ^= hasher.hash_piece_at_square(&Pieces::PAWN, &new_board.state.turn, &destination);
+                move_hash ^= hasher.hash_piece_at_square(&Pieces::PAWN, &new_board.state.turn, &destination);
                 new_board.pieces[new_board.state.turn][the_move.get_promotion_piece()].set_one(&destination);
                 new_board.colors[new_board.state.turn].set_one(&destination);
             }
@@ -124,6 +133,7 @@ impl Board {
                 };
                 let en_passant_square = Square::new(en_passant_rank * 8 + destination.get_file());
                 new_board.state.en_passant = Some(en_passant_square);
+                move_hash ^= hasher.hash_en_passant(&new_board);
             }
             3 => {
                 // 3 castling
@@ -142,6 +152,8 @@ impl Board {
                 let rook_origin = Square::new(rank + rook_origin_file);
                 let rook_destination = Square::new(rank + rook_destination_file);
                 new_board.move_piece(&rook_origin, &rook_destination, Pieces::ROOK, new_board.state.turn);
+                move_hash ^= hasher.hash_piece_at_square(&Pieces::ROOK, &new_board.state.turn, &origin);
+                move_hash ^= hasher.hash_piece_at_square(&Pieces::ROOK, &new_board.state.turn, &destination);
             }
             _ => panic!("Boom, invalid special move"),
         }
@@ -149,25 +161,31 @@ impl Board {
         if new_board.state.castling.can_someone_castle() {
             if (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_LONG_ROOK_STARTING_MASK).is_empty() {
                 new_board.state.castling.remove_white_long();
+                move_hash ^= hasher.hash_specific_castling(new_board.state.turn, CastlingSide::Long);
             }
             if (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_SHORT_ROOK_STARTING_MASK).is_empty() {
                 new_board.state.castling.remove_white_short();
+                move_hash ^= hasher.hash_specific_castling(new_board.state.turn, CastlingSide::Short);
             }
             if (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_LONG_ROOK_STARTING_MASK).is_empty() {
                 new_board.state.castling.remove_black_long();
+                move_hash ^= hasher.hash_specific_castling(new_board.state.turn, CastlingSide::Long);
             }
             if (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_SHORT_ROOK_STARTING_MASK).is_empty() {
                 new_board.state.castling.remove_black_short();
+                move_hash ^= hasher.hash_specific_castling(new_board.state.turn, CastlingSide::Short);
             }
             if new_board.state.castling.can_color_castle(new_board.state.turn) && moving_piece_type == Pieces::KING {
                 new_board.state.castling.remove_color_castling(new_board.state.turn);
+                move_hash ^= hasher.hash_specific_castling(new_board.state.turn, CastlingSide::Long);
+                move_hash ^= hasher.hash_specific_castling(new_board.state.turn, CastlingSide::Short);
             }
         }
 
         new_board.sync_all_pieces();
         new_board.state.increment_full_move();
 
-        new_board
+        (new_board, move_hash)
     }
 
     #[cfg(test)]
