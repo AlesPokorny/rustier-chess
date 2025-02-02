@@ -2,7 +2,7 @@ use std::ops::{BitXor, BitXorAssign};
 
 use crate::{
     board::Board,
-    types::{piece::Color, square::Square, state::CastlingSide},
+    types::{piece::Color, square::Square},
 };
 
 use super::polyglot_array::POLYGLOT_RAND_ARRAY;
@@ -40,7 +40,9 @@ pub struct ZobristHasher {
 
 impl ZobristHasher {
     pub fn load() -> Self {
-        Self { array: POLYGLOT_RAND_ARRAY }
+        Self {
+            array: POLYGLOT_RAND_ARRAY,
+        }
     }
 
     fn hash_board(&self, board: &Board) -> ZobristHash {
@@ -57,17 +59,25 @@ impl ZobristHasher {
         zobrist_hash
     }
 
-    pub fn hash_specific_castling(&self, color: usize, side: CastlingSide) -> ZobristHash {
-        if color == Color::WHITE && side == CastlingSide::Short {
-            return self.array[768];
-        }
-        if color == Color::WHITE && side == CastlingSide::Long {
-            return self.array[769];
-        }
-        if color == Color::BLACK && side == CastlingSide::Short {
-            return self.array[770];
-        }
+    pub fn hash_castling_white_short(&self) -> ZobristHash {
+        self.array[768]
+    }
+
+    pub fn hash_castling_white_long(&self) -> ZobristHash {
+        self.array[769]
+    }
+
+    pub fn hash_castling_black_short(&self) -> ZobristHash {
+        self.array[770]
+    }
+
+    pub fn hash_castling_black_long(&self) -> ZobristHash {
         self.array[771]
+    }
+
+    pub fn hash_castling_color(&self, color: usize) -> ZobristHash {
+        let i = 768 + (2 * color);
+        self.array[i] ^ self.array[i + 1]
     }
 
     pub fn hash_castling(&self, board: &Board) -> ZobristHash {
@@ -105,10 +115,18 @@ impl ZobristHasher {
     }
 
     pub fn hash_everyting(&self, board: &Board) -> ZobristHash {
-        self.hash_board(board) ^ self.hash_castling(board) ^ self.hash_en_passant(board) ^ self.hash_turn(board)
+        self.hash_board(board)
+            ^ self.hash_castling(board)
+            ^ self.hash_en_passant(board)
+            ^ self.hash_turn(board)
     }
 
-    pub fn hash_piece_at_square(&self, piece: &usize, color: &usize, square: &Square) -> ZobristHash {
+    pub fn hash_piece_at_square(
+        &self,
+        piece: &usize,
+        color: &usize,
+        square: &Square,
+    ) -> ZobristHash {
         self.array[color * 384 + piece * 64 + square.as_usize()]
     }
 }

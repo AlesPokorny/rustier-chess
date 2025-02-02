@@ -4,7 +4,9 @@ use std::{collections::HashMap, fmt::Display, time::Instant};
 use rand::Rng;
 
 use crate::{
-    moves::move_mask_gen::{generate_bishop_moves, generate_relevant_blockers, generate_rook_moves},
+    moves::move_mask_gen::{
+        generate_bishop_moves, generate_relevant_blockers, generate_rook_moves,
+    },
     types::{bitboard::BitBoard, piece::Pieces, square::Square},
 };
 
@@ -70,7 +72,10 @@ fn find_magic(square: &Square, piece: usize, timeout_seconds: u64) -> (u8, u64) 
 
 struct IncompatibleMagic;
 
-fn verify_magic(moves: &HashMap<BitBoard, BitBoard>, magic: &Magic) -> Result<(), IncompatibleMagic> {
+fn verify_magic(
+    moves: &HashMap<BitBoard, BitBoard>,
+    magic: &Magic,
+) -> Result<(), IncompatibleMagic> {
     let mut resulting_map: HashMap<u64, BitBoard> = HashMap::new();
     let mut max_key = 0;
     for (blocker_mask, move_mask) in moves.iter() {

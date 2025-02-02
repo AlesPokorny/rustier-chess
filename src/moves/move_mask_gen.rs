@@ -28,7 +28,12 @@ impl MoveGenMasks {
         let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, BISHOP_MOVES_FILE)).unwrap();
         let bishop_moves = deserialize_from::<&mut File, Vec<Vec<BitBoard>>>(&mut reader).unwrap();
 
-        Self { king_moves, knight_moves, rook_moves, bishop_moves }
+        Self {
+            king_moves,
+            knight_moves,
+            rook_moves,
+            bishop_moves,
+        }
     }
 }
 
@@ -41,7 +46,16 @@ const BISHOP_MOVES_FILE: &str = "bishop.bin";
 fn generate_knight_moves(square: &Square) -> BitBoard {
     let i8_bit = square.as_u8() as i8;
     let square_file = square.get_file() as i8;
-    let pony_moves = [(-1, 2), (-1, -2), (-2, 1), (-2, -1), (1, 2), (1, -2), (2, 1), (2, -1)];
+    let pony_moves = [
+        (-1, 2),
+        (-1, -2),
+        (-2, 1),
+        (-2, -1),
+        (1, 2),
+        (1, -2),
+        (2, 1),
+        (2, -1),
+    ];
 
     let mut moves = BitBoard::zeros();
 
@@ -96,7 +110,8 @@ pub fn generate_rook_moves(square: &Square) -> (BitBoard, HashMap<BitBoard, BitB
     let relevant_blockers = generate_relevant_blockers(square, Pieces::ROOK);
 
     let blockers_mask = create_blocker_boards(&relevant_blockers);
-    let legal_moves_mask = generate_slider_moves_from_blockers(square, &blockers_mask, Pieces::ROOK);
+    let legal_moves_mask =
+        generate_slider_moves_from_blockers(square, &blockers_mask, Pieces::ROOK);
 
     let mut output: HashMap<BitBoard, BitBoard> = HashMap::with_capacity(blockers_mask.len());
 
@@ -122,7 +137,10 @@ pub fn generate_magic_moves(square: &Square, piece: usize) -> Vec<BitBoard> {
     for (blockers, legal_moves) in blockers_mask.into_iter().zip(legal_moves_mask) {
         let index = magic.get_index(blockers);
         if ![legal_moves, BitBoard::zeros()].contains(&output[index]) {
-            panic!("Magic seems to be wrong for square {} and piece {}", square, piece);
+            panic!(
+                "Magic seems to be wrong for square {} and piece {}",
+                square, piece
+            );
         }
         output[index] = legal_moves;
     }
@@ -142,7 +160,11 @@ pub fn generate_bishop_moves(square: &Square) -> (BitBoard, HashMap<BitBoard, Bi
     (relevant_blockers, output)
 }
 
-fn generate_slider_moves_from_blockers(square: &Square, blockers: &[BitBoard], piece: usize) -> Vec<BitBoard> {
+fn generate_slider_moves_from_blockers(
+    square: &Square,
+    blockers: &[BitBoard],
+    piece: usize,
+) -> Vec<BitBoard> {
     let directions: [(i8, i8); 4] = match piece {
         Pieces::ROOK => [(-1, 0), (1, 0), (0, 1), (0, -1)],
         Pieces::BISHOP => [(-1, -1), (1, 1), (1, -1), (-1, 1)],
@@ -179,7 +201,10 @@ fn generate_slider_moves_from_blockers(square: &Square, blockers: &[BitBoard], p
     legal_moves_vec
 }
 
-fn generate_bishop_legal_moves_from_blockers(square: &Square, blockers: &[BitBoard]) -> Vec<BitBoard> {
+fn generate_bishop_legal_moves_from_blockers(
+    square: &Square,
+    blockers: &[BitBoard],
+) -> Vec<BitBoard> {
     let mut legal_moves_vec: Vec<BitBoard> = Vec::with_capacity(blockers.len());
     let file = square.get_file() as i8;
     let row = square.get_rank() as i8;
@@ -229,7 +254,8 @@ pub fn generate_relevant_blockers(square: &Square, piece: usize) -> BitBoard {
             let new_row = row + step * direction.0;
             let new_file = file + step * direction.1;
 
-            if piece == Pieces::BISHOP && (!(1..7).contains(&new_row) | !(1..7).contains(&new_file)) {
+            if piece == Pieces::BISHOP && (!(1..7).contains(&new_row) | !(1..7).contains(&new_file))
+            {
                 break;
             }
             if piece == Pieces::ROOK {

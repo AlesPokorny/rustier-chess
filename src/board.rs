@@ -7,7 +7,7 @@ use crate::moves::move_mask_gen::MoveGenMasks;
 use crate::moves::moves_calculation::{get_all_moves, is_square_in_check};
 use crate::moves::moves_utils::Move;
 use crate::types::state::{
-    CastlingSide, BLACK_LONG_ROOK_STARTING_MASK, BLACK_SHORT_ROOK_STARTING_MASK, WHITE_LONG_ROOK_STARTING_MASK,
+    BLACK_LONG_ROOK_STARTING_MASK, BLACK_SHORT_ROOK_STARTING_MASK, WHITE_LONG_ROOK_STARTING_MASK,
     WHITE_SHORT_ROOK_STARTING_MASK,
 };
 use crate::types::{
@@ -32,7 +32,13 @@ impl Board {
         self.pieces[color][piece].set_zero(square);
     }
 
-    pub fn move_piece(&mut self, origin: &Square, destination: &Square, piece: usize, color: usize) {
+    pub fn move_piece(
+        &mut self,
+        origin: &Square,
+        destination: &Square,
+        piece: usize,
+        color: usize,
+    ) {
         self.colors[color].set_one(destination);
         self.pieces[color][piece].set_one(destination);
         self.clear_piece(origin, piece, color);
@@ -42,7 +48,11 @@ impl Board {
         self.all_pieces = self.colors[0] | self.colors[1];
     }
 
-    pub fn get_legal_moves(&self, move_gen_masks: &MoveGenMasks, hasher: &ZobristHasher) -> Vec<(Move, Board)> {
+    pub fn get_legal_moves(
+        &self,
+        move_gen_masks: &MoveGenMasks,
+        hasher: &ZobristHasher,
+    ) -> Vec<(Move, Board)> {
         let all_moves: Vec<(Move, Board)> = get_all_moves(self, move_gen_masks)
             .into_iter()
             .filter_map(|the_move| {
@@ -77,10 +87,15 @@ impl Board {
 
         new_board.colors[new_board.state.turn].set_zero(&origin);
         new_board.colors[new_board.state.turn].set_one(&destination);
-        for (piece_type, piece_bitboard) in new_board.pieces[new_board.state.turn].iter_mut().enumerate() {
+        for (piece_type, piece_bitboard) in new_board.pieces[new_board.state.turn]
+            .iter_mut()
+            .enumerate()
+        {
             if piece_bitboard.read_square(&origin) {
-                move_hash ^= hasher.hash_piece_at_square(&piece_type, &new_board.state.turn, &origin);
-                move_hash ^= hasher.hash_piece_at_square(&piece_type, &new_board.state.turn, &destination);
+                move_hash ^=
+                    hasher.hash_piece_at_square(&piece_type, &new_board.state.turn, &origin);
+                move_hash ^=
+                    hasher.hash_piece_at_square(&piece_type, &new_board.state.turn, &destination);
                 moving_piece_type = piece_type;
                 piece_bitboard.set_zero(&origin);
                 piece_bitboard.set_one(&destination);
@@ -93,10 +108,17 @@ impl Board {
 
         if is_capture {
             new_board.colors[new_board.state.opponent].set_zero(&destination);
-            for (piece_type, piece_bitboard) in new_board.pieces[new_board.state.opponent].iter_mut().enumerate() {
+            for (piece_type, piece_bitboard) in new_board.pieces[new_board.state.opponent]
+                .iter_mut()
+                .enumerate()
+            {
                 if piece_bitboard.read_square(&destination) {
                     piece_bitboard.set_zero(&destination);
-                    move_hash ^= hasher.hash_piece_at_square(&piece_type, &new_board.state.opponent, &destination);
+                    move_hash ^= hasher.hash_piece_at_square(
+                        &piece_type,
+                        &new_board.state.opponent,
+                        &destination,
+                    );
                     break;
                 }
             }
@@ -106,7 +128,11 @@ impl Board {
             if destination == en_passant_square && moving_piece_type == Pieces::PAWN {
                 let capture_square = Square::new(origin.get_rank() * 8 + destination.get_file());
                 new_board.clear_piece(&capture_square, Pieces::PAWN, new_board.state.opponent);
-                move_hash ^= hasher.hash_piece_at_square(&Pieces::PAWN, &new_board.state.opponent, &capture_square);
+                move_hash ^= hasher.hash_piece_at_square(
+                    &Pieces::PAWN,
+                    &new_board.state.opponent,
+                    &capture_square,
+                );
             }
         }
 
@@ -119,9 +145,12 @@ impl Board {
                 // 1 promotion
                 new_board.clear_piece(&origin, Pieces::PAWN, new_board.state.turn);
                 new_board.clear_piece(&destination, Pieces::PAWN, new_board.state.turn);
-                move_hash ^= hasher.hash_piece_at_square(&Pieces::PAWN, &new_board.state.turn, &destination);
-                move_hash ^= hasher.hash_piece_at_square(&Pieces::PAWN, &new_board.state.turn, &destination);
-                new_board.pieces[new_board.state.turn][the_move.get_promotion_piece()].set_one(&destination);
+                move_hash ^=
+                    hasher.hash_piece_at_square(&Pieces::PAWN, &new_board.state.turn, &destination);
+                move_hash ^=
+                    hasher.hash_piece_at_square(&Pieces::PAWN, &new_board.state.turn, &destination);
+                new_board.pieces[new_board.state.turn][the_move.get_promotion_piece()]
+                    .set_one(&destination);
                 new_board.colors[new_board.state.turn].set_one(&destination);
             }
             2 => {
@@ -151,34 +180,61 @@ impl Board {
                 let rank = origin.get_rank() * 8;
                 let rook_origin = Square::new(rank + rook_origin_file);
                 let rook_destination = Square::new(rank + rook_destination_file);
-                new_board.move_piece(&rook_origin, &rook_destination, Pieces::ROOK, new_board.state.turn);
-                move_hash ^= hasher.hash_piece_at_square(&Pieces::ROOK, &new_board.state.turn, &origin);
-                move_hash ^= hasher.hash_piece_at_square(&Pieces::ROOK, &new_board.state.turn, &destination);
+                new_board.move_piece(
+                    &rook_origin,
+                    &rook_destination,
+                    Pieces::ROOK,
+                    new_board.state.turn,
+                );
+                move_hash ^=
+                    hasher.hash_piece_at_square(&Pieces::ROOK, &new_board.state.turn, &origin);
+                move_hash ^=
+                    hasher.hash_piece_at_square(&Pieces::ROOK, &new_board.state.turn, &destination);
             }
             _ => panic!("Boom, invalid special move"),
         }
 
         if new_board.state.castling.can_someone_castle() {
-            if (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_LONG_ROOK_STARTING_MASK).is_empty() {
+            if new_board.state.castling.white_long()
+                && (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_LONG_ROOK_STARTING_MASK)
+                    .is_empty()
+            {
                 new_board.state.castling.remove_white_long();
-                move_hash ^= hasher.hash_specific_castling(new_board.state.turn, CastlingSide::Long);
+                move_hash ^= hasher.hash_castling_white_long();
             }
-            if (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_SHORT_ROOK_STARTING_MASK).is_empty() {
+            if new_board.state.castling.white_short()
+                && (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_SHORT_ROOK_STARTING_MASK)
+                    .is_empty()
+            {
                 new_board.state.castling.remove_white_short();
-                move_hash ^= hasher.hash_specific_castling(new_board.state.turn, CastlingSide::Short);
+                move_hash ^= hasher.hash_castling_white_short();
             }
-            if (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_LONG_ROOK_STARTING_MASK).is_empty() {
+            if new_board.state.castling.black_long()
+                && (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_LONG_ROOK_STARTING_MASK)
+                    .is_empty()
+            {
                 new_board.state.castling.remove_black_long();
-                move_hash ^= hasher.hash_specific_castling(new_board.state.turn, CastlingSide::Long);
+                move_hash ^= hasher.hash_castling_black_long();
             }
-            if (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_SHORT_ROOK_STARTING_MASK).is_empty() {
+            if new_board.state.castling.black_short()
+                && (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_SHORT_ROOK_STARTING_MASK)
+                    .is_empty()
+            {
                 new_board.state.castling.remove_black_short();
-                move_hash ^= hasher.hash_specific_castling(new_board.state.turn, CastlingSide::Short);
+                move_hash ^= hasher.hash_castling_black_short();
             }
-            if new_board.state.castling.can_color_castle(new_board.state.turn) && moving_piece_type == Pieces::KING {
-                new_board.state.castling.remove_color_castling(new_board.state.turn);
-                move_hash ^= hasher.hash_specific_castling(new_board.state.turn, CastlingSide::Long);
-                move_hash ^= hasher.hash_specific_castling(new_board.state.turn, CastlingSide::Short);
+            if new_board
+                .state
+                .castling
+                .can_color_castle(new_board.state.turn)
+                && moving_piece_type == Pieces::KING
+            {
+                new_board
+                    .state
+                    .castling
+                    .remove_color_castling(new_board.state.turn);
+                move_hash ^= hasher.hash_castling_color(new_board.state.turn);
+                move_hash ^= hasher.hash_castling_color(new_board.state.turn);
             }
         }
 
@@ -331,9 +387,21 @@ impl Board {
             Err(_) => return Err("Invalid full move string")?,
         };
 
-        let state = State { castling, en_passant, half_moves, full_moves, turn, opponent };
+        let state = State {
+            castling,
+            en_passant,
+            half_moves,
+            full_moves,
+            turn,
+            opponent,
+        };
 
-        let board = Self { colors, pieces, all_pieces, state };
+        let board = Self {
+            colors,
+            pieces,
+            all_pieces,
+            state,
+        };
 
         Ok(board)
     }

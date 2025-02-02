@@ -15,7 +15,11 @@ const PROMOTION_PIECES: [usize; 4] = [Pieces::QUEEN, Pieces::KNIGHT, Pieces::ROO
 // TODO: Clean this shit up
 pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
     let mut moves: Vec<Move> = Vec::new();
-    let direction = if board.state.turn == Color::WHITE { 1_i8 } else { -1 };
+    let direction = if board.state.turn == Color::WHITE {
+        1_i8
+    } else {
+        -1
+    };
 
     let new_square = square + direction * 8;
 
@@ -30,7 +34,11 @@ pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
         } else {
             moves.push(new_move);
 
-            let base_rank = if board.state.turn == Color::WHITE { 1 } else { 6 };
+            let base_rank = if board.state.turn == Color::WHITE {
+                1
+            } else {
+                6
+            };
 
             if square.get_rank() == base_rank {
                 let new_square = square + direction * 16;
@@ -50,7 +58,8 @@ pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
             continue;
         }
         let attacking_square = Square::new((new_rank * 8 + new_file) as u8);
-        if board.colors[board.state.opponent].read_square(&attacking_square) | board.check_en_passant(&attacking_square)
+        if board.colors[board.state.opponent].read_square(&attacking_square)
+            | board.check_en_passant(&attacking_square)
         {
             let new_move = Move::from_origin_and_destination(&attacking_square, &square);
             if !(1..=6).contains(&new_rank) {
@@ -68,7 +77,11 @@ pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
     moves
 }
 
-pub fn get_knight_moves(square: &Square, move_gen_masks: &MoveGenMasks, board: &Board) -> Vec<Move> {
+pub fn get_knight_moves(
+    square: &Square,
+    move_gen_masks: &MoveGenMasks,
+    board: &Board,
+) -> Vec<Move> {
     (move_gen_masks.knight_moves[square.as_usize()] & !board.colors[board.state.turn])
         .get_ones()
         .into_iter()
@@ -77,7 +90,8 @@ pub fn get_knight_moves(square: &Square, move_gen_masks: &MoveGenMasks, board: &
 }
 
 fn get_king_moves(square: &Square, move_gen_masks: &MoveGenMasks, board: &Board) -> Vec<Move> {
-    let mut moves: Vec<Move> = (move_gen_masks.king_moves[square.as_usize()] & !board.colors[board.state.turn])
+    let mut moves: Vec<Move> = (move_gen_masks.king_moves[square.as_usize()]
+        & !board.colors[board.state.turn])
         .get_ones()
         .into_iter()
         .map(|new_square| Move::from_origin_and_destination(&new_square, square))
@@ -93,13 +107,19 @@ fn get_rook_move_mask(square: &Square, board: &Board, move_gen_masks: &MoveGenMa
     move_gen_masks.rook_moves[square.as_usize()][index] & !board.colors[board.state.turn]
 }
 
-fn get_slidy_boii_moves(square: &Square, board: &Board, move_gen_masks: &MoveGenMasks, piece: usize) -> Vec<Move> {
+fn get_slidy_boii_moves(
+    square: &Square,
+    board: &Board,
+    move_gen_masks: &MoveGenMasks,
+    piece: usize,
+) -> Vec<Move> {
     let possible_moves = if piece == Pieces::ROOK {
         get_rook_move_mask(square, board, move_gen_masks)
     } else if piece == Pieces::BISHOP {
         get_bishop_move_mask(square, board, move_gen_masks)
     } else {
-        get_rook_move_mask(square, board, move_gen_masks) | get_bishop_move_mask(square, board, move_gen_masks)
+        get_rook_move_mask(square, board, move_gen_masks)
+            | get_bishop_move_mask(square, board, move_gen_masks)
     };
 
     let all_desitnations = possible_moves.get_ones();
@@ -184,16 +204,24 @@ pub fn is_square_in_check(square: &Square, board: &Board, move_gen_masks: &MoveG
     }
 
     let rook_move_mask = get_rook_move_mask(square, board, move_gen_masks);
-    if !(rook_move_mask & (opponent_pieces[Pieces::ROOK] | opponent_pieces[Pieces::QUEEN])).is_empty() {
+    if !(rook_move_mask & (opponent_pieces[Pieces::ROOK] | opponent_pieces[Pieces::QUEEN]))
+        .is_empty()
+    {
         return true;
     }
 
     let bishop_move_mask = get_bishop_move_mask(square, board, move_gen_masks);
-    if !(bishop_move_mask & (opponent_pieces[Pieces::BISHOP] | opponent_pieces[Pieces::QUEEN])).is_empty() {
+    if !(bishop_move_mask & (opponent_pieces[Pieces::BISHOP] | opponent_pieces[Pieces::QUEEN]))
+        .is_empty()
+    {
         return true;
     }
 
-    let pawn_direction = if board.state.turn == Color::WHITE { 1_i8 } else { -1 };
+    let pawn_direction = if board.state.turn == Color::WHITE {
+        1_i8
+    } else {
+        -1
+    };
     for offset in [7, 9] {
         let new_bit = square.as_u8() as i8 + pawn_direction * offset;
         if !(0..64).contains(&new_bit) {
@@ -219,11 +247,15 @@ pub fn get_all_moves(board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move> 
             .into_iter()
             .flat_map(|square| match piece {
                 Pieces::PAWN => get_pawn_moves(square, board),
-                Pieces::BISHOP => get_slidy_boii_moves(&square, board, move_gen_masks, Pieces::BISHOP),
+                Pieces::BISHOP => {
+                    get_slidy_boii_moves(&square, board, move_gen_masks, Pieces::BISHOP)
+                }
                 Pieces::KNIGHT => get_knight_moves(&square, move_gen_masks, board),
                 Pieces::ROOK => get_slidy_boii_moves(&square, board, move_gen_masks, Pieces::ROOK),
                 Pieces::KING => get_king_moves(&square, move_gen_masks, board),
-                Pieces::QUEEN => get_slidy_boii_moves(&square, board, move_gen_masks, Pieces::QUEEN),
+                Pieces::QUEEN => {
+                    get_slidy_boii_moves(&square, board, move_gen_masks, Pieces::QUEEN)
+                }
                 _ => panic!("That is a weird piece"),
             })
             .collect();
@@ -248,7 +280,10 @@ mod test_move_calculation {
 
         let moves = get_pawn_moves(square, &board);
 
-        assert_eq!(moves[0], Move::from_origin_and_destination(&Square::new(16), &square));
+        assert_eq!(
+            moves[0],
+            Move::from_origin_and_destination(&Square::new(16), &square)
+        );
         let mut new_move = Move::from_origin_and_destination(&Square::new(24), &square);
         new_move.set_en_passant();
         assert_eq!(moves[1], new_move);
@@ -266,14 +301,17 @@ mod test_move_calculation {
             moves[0],
             Move::from_origin_and_destination(&Square::from_str("b6").unwrap(), &square)
         );
-        let mut new_move = Move::from_origin_and_destination(&Square::from_str("b5").unwrap(), &square);
+        let mut new_move =
+            Move::from_origin_and_destination(&Square::from_str("b5").unwrap(), &square);
         new_move.set_en_passant();
         assert_eq!(moves[1], new_move);
     }
 
     #[test]
     fn test_is_square_in_check() {
-        let board = Board::from_fen("r1bqkbnr/pp1p1ppp/2n1p3/2p5/4P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 0 4").unwrap();
+        let board =
+            Board::from_fen("r1bqkbnr/pp1p1ppp/2n1p3/2p5/4P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 0 4")
+                .unwrap();
         let move_gen_masks = MoveGenMasks::load();
 
         let in_check_positions = ["a5", "d5", "e5", "f5", "e7", "d6", "f6", "d5", "h4"];
@@ -293,7 +331,9 @@ mod test_move_calculation {
 
     #[test]
     fn test_get_castling_moves_black() {
-        let board = Board::from_fen("r3k2r/pbpq1ppp/1pnp1n2/2b1p3/4P3/1PNB1N2/PBPPQPPP/R3K2R b KQkq - 3 9").unwrap();
+        let board =
+            Board::from_fen("r3k2r/pbpq1ppp/1pnp1n2/2b1p3/4P3/1PNB1N2/PBPPQPPP/R3K2R b KQkq - 3 9")
+                .unwrap();
         let move_gen_masks = MoveGenMasks::load();
         let king_square = board.pieces[Color::BLACK][Pieces::KING].get_one();
 
@@ -312,7 +352,10 @@ mod test_move_calculation {
 
     #[test]
     fn test_get_castling_moves_white() {
-        let board = Board::from_fen("r1b1k2r/pppq1ppp/3p1n2/2b1p3/3nP3/1PNB1N2/PBPPQPPP/R3K2R w KQkq - 6 8").unwrap();
+        let board = Board::from_fen(
+            "r1b1k2r/pppq1ppp/3p1n2/2b1p3/3nP3/1PNB1N2/PBPPQPPP/R3K2R w KQkq - 6 8",
+        )
+        .unwrap();
         let move_gen_masks = MoveGenMasks::load();
         let king_square = board.pieces[Color::WHITE][Pieces::KING].get_one();
 
