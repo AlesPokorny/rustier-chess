@@ -83,6 +83,22 @@ impl BitBoard {
     pub fn as_u64(&self) -> u64 {
         self.0
     }
+
+    pub fn shift_up(&self, n: u8) -> Self {
+        Self(self.0 << (n * 8))
+    }
+
+    pub fn shift_down(&self, n: u8) -> Self {
+        Self(self.0 >> (n * 8))
+    }
+
+    pub fn shift_right(&self, n: u8) -> Self {
+        Self(self.0 << n)
+    }
+
+    pub fn shift_left(&self, n: u8) -> Self {
+        Self(self.0 >> n)
+    }
 }
 
 impl fmt::Display for BitBoard {

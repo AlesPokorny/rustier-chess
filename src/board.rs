@@ -24,6 +24,7 @@ pub struct Board {
     pub pieces: [[BitBoard; 6]; 2],
     pub all_pieces: BitBoard,
     pub state: State,
+    pub zobrist: ZobristHash,
 }
 
 impl Board {
@@ -56,7 +57,7 @@ impl Board {
         let all_moves: Vec<(Move, Board)> = get_all_moves(self, move_gen_masks)
             .into_iter()
             .filter_map(|the_move| {
-                let (mut new_board, _) = self.try_move(&the_move, hasher);
+                let mut new_board = self.try_move(&the_move, hasher);
                 if !is_square_in_check(
                     &new_board.pieces[new_board.state.turn][Pieces::KING].get_one(),
                     &new_board,
@@ -72,7 +73,7 @@ impl Board {
         all_moves
     }
 
-    pub fn try_move(&self, the_move: &Move, hasher: &ZobristHasher) -> (Board, ZobristHash) {
+    pub fn try_move(&self, the_move: &Move, hasher: &ZobristHasher) -> Board {
         let origin = the_move.get_origin();
         let destination = the_move.get_destination();
         let mut move_hash = ZobristHash::new(0_u64);
@@ -238,10 +239,11 @@ impl Board {
             }
         }
 
+        new_board.zobrist ^= move_hash;
         new_board.sync_all_pieces();
         new_board.state.increment_full_move();
 
-        (new_board, move_hash)
+        new_board
     }
 
     #[cfg(test)]
@@ -268,6 +270,7 @@ impl Board {
             ],
             all_pieces: BitBoard::zeros(),
             state: State::default(),
+            zobrist: ZobristHash::zero(),
         }
     }
 
@@ -401,6 +404,7 @@ impl Board {
             pieces,
             all_pieces,
             state,
+            zobrist: ZobristHash::new(0x463b96181691fc9c), // default board hash with polyglot randoms
         };
 
         Ok(board)

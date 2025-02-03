@@ -2,12 +2,15 @@ use std::ops::{BitXor, BitXorAssign};
 
 use crate::{
     board::Board,
-    types::{piece::Color, square::Square},
+    types::{
+        piece::{Color, Pieces},
+        square::Square,
+    },
 };
 
 use super::polyglot_array::POLYGLOT_RAND_ARRAY;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ZobristHash(pub u64);
 
 impl ZobristHash {
@@ -17,6 +20,10 @@ impl ZobristHash {
 
     pub fn get_value(&self) -> u64 {
         self.0
+    }
+
+    pub fn zero() -> Self {
+        Self(0)
     }
 }
 
@@ -34,6 +41,7 @@ impl BitXorAssign for ZobristHash {
     }
 }
 
+/// all info can be found here http://hgm.nubati.net/book_format.html
 pub struct ZobristHasher {
     array: [ZobristHash; 781],
 }
@@ -45,7 +53,7 @@ impl ZobristHasher {
         }
     }
 
-    fn hash_board(&self, board: &Board) -> ZobristHash {
+    pub fn hash_board(&self, board: &Board) -> ZobristHash {
         let mut zobrist_hash = ZobristHash::new(0_u64);
 
         for (color, pieces) in board.pieces.iter().enumerate() {
@@ -99,9 +107,17 @@ impl ZobristHasher {
         zobrist_hash
     }
 
+    /// Zobrist hashes en passant only if there is a pawn around that can possibly use it
     pub fn hash_en_passant(&self, board: &Board) -> ZobristHash {
         if let Some(square) = board.state.en_passant {
-            return self.array[772 + square.get_file() as usize];
+            let mask = if board.state.turn == Color::WHITE {
+                board.pieces[Color::WHITE][Pieces::PAWN].shift_up(1)
+            } else {
+                board.pieces[Color::BLACK][Pieces::PAWN].shift_down(1)
+            };
+            if (mask.shift_left(1) | mask.shift_right(1)).read_square(&square) {
+                return self.array[772 + square.get_file() as usize];
+            }
         }
         ZobristHash::new(0)
     }
@@ -128,5 +144,141 @@ impl ZobristHasher {
         square: &Square,
     ) -> ZobristHash {
         self.array[color * 384 + piece * 64 + square.as_usize()]
+    }
+}
+
+#[cfg(test)]
+mod test_zobrist {
+    use super::*;
+
+    #[test]
+    fn test_zobrist_castling_hash() {
+        let board = Board::default();
+        let hasher = ZobristHasher::load();
+
+        assert_eq!(
+            hasher.hash_castling(&board),
+            ZobristHash::new(0x7b3a2dabd781afe9)
+        )
+    }
+
+    #[test]
+    fn test_zobrist_turn_hash() {
+        let board = Board::default();
+        let hasher = ZobristHasher::load();
+
+        assert_eq!(
+            hasher.hash_turn(&board),
+            ZobristHash::new(0xf8d626aaaf278509)
+        )
+    }
+
+    #[test]
+    fn test_zobrist_hash_board() {
+        let board = Board::default();
+        let hasher = ZobristHasher::load();
+
+        assert_eq!(
+            hasher.hash_board(&board),
+            ZobristHash::new(0xc5d79d196e37d67c)
+        )
+    }
+
+    #[test]
+    fn test_zobrist_hash_everything_1() {
+        let board = Board::default();
+        let hasher = ZobristHasher::load();
+
+        assert_eq!(
+            hasher.hash_everyting(&board),
+            ZobristHash::new(0x463b96181691fc9c)
+        )
+    }
+
+    #[test]
+    fn test_zobrist_hash_everything_2() {
+        let board =
+            Board::from_fen("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2")
+                .unwrap();
+        let hasher = ZobristHasher::load();
+
+        assert_eq!(
+            hasher.hash_everyting(&board),
+            ZobristHash::new(0x0756b94461c50fb0)
+        )
+    }
+
+    #[test]
+    fn test_zobrist_hash_everything_3() {
+        let board =
+            Board::from_fen("rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2").unwrap();
+        let hasher = ZobristHasher::load();
+
+        assert_eq!(
+            hasher.hash_everyting(&board),
+            ZobristHash::new(0x662fafb965db29d4)
+        )
+    }
+
+    #[test]
+    fn test_zobrist_hash_everything_4() {
+        let board =
+            Board::from_fen("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3")
+                .unwrap();
+        let hasher = ZobristHasher::load();
+
+        assert_eq!(
+            hasher.hash_everyting(&board),
+            ZobristHash::new(0x22a48b5a8e47ff78)
+        )
+    }
+
+    #[test]
+    fn test_zobrist_hash_everything_5() {
+        let board =
+            Board::from_fen("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPPKPPP/RNBQ1BNR b kq - 0 3").unwrap();
+        let hasher = ZobristHasher::load();
+
+        assert_eq!(
+            hasher.hash_everyting(&board),
+            ZobristHash::new(0x652a607ca3f242c1)
+        )
+    }
+
+    #[test]
+    fn test_zobrist_hash_everything_6() {
+        let board =
+            Board::from_fen("rnbq1bnr/ppp1pkpp/8/3pPp2/8/8/PPPPKPPP/RNBQ1BNR w - - 0 4").unwrap();
+        let hasher = ZobristHasher::load();
+
+        assert_eq!(
+            hasher.hash_everyting(&board),
+            ZobristHash::new(0x00fdd303c946bdd9)
+        )
+    }
+
+    #[test]
+    fn test_zobrist_hash_everything_8() {
+        let board =
+            Board::from_fen("rnbqkbnr/p1pppppp/8/8/PpP4P/8/1P1PPPP1/RNBQKBNR b KQkq c3 0 3")
+                .unwrap();
+        let hasher = ZobristHasher::load();
+
+        assert_eq!(
+            hasher.hash_everyting(&board),
+            ZobristHash::new(0x3c8123ea7b067637)
+        )
+    }
+
+    #[test]
+    fn test_zobrist_hash_everything_9() {
+        let board = Board::from_fen("rnbqkbnr/p1pppppp/8/8/P6P/R1p5/1P1PPPP1/1NBQKBNR b Kkq - 0 4")
+            .unwrap();
+        let hasher = ZobristHasher::load();
+
+        assert_eq!(
+            hasher.hash_everyting(&board),
+            ZobristHash::new(0x5c3f9b829b279560)
+        )
     }
 }
