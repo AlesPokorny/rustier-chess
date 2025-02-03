@@ -1,7 +1,8 @@
 [package]
-name = "rustier-chess"
+name = "rustier_chess"
 version = "0.1.0"
 edition = "2021"
+path = "rustier_chess/engine"
 
 [dependencies]
 serde_derive = "1.0.217"
@@ -10,10 +11,26 @@ bincode = "1.3.3"
 rand = "0.9.0"
 rayon = "1.10.0"
 itertools = "0.14.0"
+pyo3 = { version = "0.22.6", features = ["extension-module"] }
 
 [dev-dependencies]
 once_cell = "1.20.2"
 
+[lib]
+name = "engine"
+path = "rustier_chess/engine/lib.rs"
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[[bin]]
+name = "chess_engine_bin"
+path = "./rustier_chess/engine/bin.rs"
+test = false
+
 [[bench]]
 name = "move_generation"
+path = "./rustier_chess/engine/benches/move_generation.rs"
 harness = false
+
+[features]
+pyo3 = []

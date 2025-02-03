@@ -7,6 +7,12 @@ use crate::{
     types::{bitboard::BitBoard, piece::Pieces, square::Square},
 };
 
+const MOVES_FOLDER_PATH: &str = "./rustier_chess/engine/moves/data/";
+const KING_MOVES_FILE: &str = "king.bin";
+const KNIGHT_MOVES_FILE: &str = "knight.bin";
+const ROOK_MOVES_FILE: &str = "rook.bin";
+const BISHOP_MOVES_FILE: &str = "bishop.bin";
+
 pub struct MoveGenMasks {
     pub king_moves: Vec<BitBoard>,
     pub knight_moves: Vec<BitBoard>,
@@ -36,12 +42,6 @@ impl MoveGenMasks {
         }
     }
 }
-
-const MOVES_FOLDER_PATH: &str = "./src/moves/data/";
-const KING_MOVES_FILE: &str = "king.bin";
-const KNIGHT_MOVES_FILE: &str = "knight.bin";
-const ROOK_MOVES_FILE: &str = "rook.bin";
-const BISHOP_MOVES_FILE: &str = "bishop.bin";
 
 fn generate_knight_moves(square: &Square) -> BitBoard {
     let i8_bit = square.as_u8() as i8;

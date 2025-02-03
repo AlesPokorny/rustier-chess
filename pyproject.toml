@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools", "setuptools-rust"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rustier-chess"
+version = "1.0"
+
+[tool.setuptools]
+packages = [
+    "rustier_chess",
+    "rustier_chess.engine",
+    "rustier_chess.gui",
+]
+
+[[tool.setuptools-rust.ext-modules]]
+target = "rustier_chess.engine"
+binding = "PyO3" 
+debug = false
+features = ["pyo3", "pyo3/extension-module"]
