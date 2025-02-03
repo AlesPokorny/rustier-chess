@@ -1,4 +1,7 @@
-use std::ops::{BitXor, BitXorAssign};
+use std::{
+    hash::{Hash, Hasher},
+    ops::{BitXor, BitXorAssign},
+};
 
 use crate::{
     board::Board,
@@ -24,6 +27,26 @@ impl ZobristHash {
 
     pub fn zero() -> Self {
         Self(0)
+    }
+}
+
+impl Hash for ZobristHash {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u64(self.0);
+    }
+}
+
+impl Hasher for ZobristHash {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    fn write(&mut self, _bytes: &[u8]) {
+        panic!("This hasher only takes u64");
+    }
+
+    fn write_u64(&mut self, i: u64) {
+        self.0 = i;
     }
 }
 
