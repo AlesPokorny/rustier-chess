@@ -137,7 +137,7 @@ impl Board {
             }
         }
 
-        move_hash ^= hasher.hash_en_passant(&new_board);
+        move_hash ^= hasher.hash_en_passant(&new_board, new_board.state.turn);
         new_board.state.en_passant = None;
 
         match the_move.special_move() {
@@ -163,7 +163,7 @@ impl Board {
                 };
                 let en_passant_square = Square::new(en_passant_rank * 8 + destination.get_file());
                 new_board.state.en_passant = Some(en_passant_square);
-                move_hash ^= hasher.hash_en_passant(&new_board);
+                move_hash ^= hasher.hash_en_passant(&new_board, new_board.state.opponent);
             }
             3 => {
                 // 3 castling

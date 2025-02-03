@@ -108,9 +108,9 @@ impl ZobristHasher {
     }
 
     /// Zobrist hashes en passant only if there is a pawn around that can possibly use it
-    pub fn hash_en_passant(&self, board: &Board) -> ZobristHash {
+    pub fn hash_en_passant(&self, board: &Board, turn: usize) -> ZobristHash {
         if let Some(square) = board.state.en_passant {
-            let mask = if board.state.turn == Color::WHITE {
+            let mask = if turn == Color::WHITE {
                 board.pieces[Color::WHITE][Pieces::PAWN].shift_up(1)
             } else {
                 board.pieces[Color::BLACK][Pieces::PAWN].shift_down(1)
@@ -133,7 +133,7 @@ impl ZobristHasher {
     pub fn hash_everyting(&self, board: &Board) -> ZobristHash {
         self.hash_board(board)
             ^ self.hash_castling(board)
-            ^ self.hash_en_passant(board)
+            ^ self.hash_en_passant(board, board.state.turn)
             ^ self.hash_turn(board)
     }
 
