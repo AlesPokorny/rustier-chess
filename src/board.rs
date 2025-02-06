@@ -49,6 +49,19 @@ impl Board {
         self.all_pieces = self.colors[0] | self.colors[1];
     }
 
+    pub fn get_capture_moves(
+        &self,
+        move_gen_masks: &MoveGenMasks,
+        hasher: &ZobristHasher,
+    ) -> Vec<(Move, Board)> {
+        self.get_legal_moves(move_gen_masks, hasher)
+            .into_iter()
+            .filter(|(legal_move, _)| {
+                self.colors[self.state.turn].read_square(&legal_move.get_destination())
+            })
+            .collect()
+    }
+
     pub fn get_legal_moves(
         &self,
         move_gen_masks: &MoveGenMasks,
@@ -246,7 +259,6 @@ impl Board {
         new_board
     }
 
-    #[cfg(test)]
     pub fn empty() -> Self {
         Board {
             colors: [BitBoard::zeros(), BitBoard::zeros()],

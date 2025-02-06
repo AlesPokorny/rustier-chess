@@ -1,3 +1,4 @@
+use core::f32;
 use std::collections::HashMap;
 
 use rand::Rng;
@@ -38,7 +39,7 @@ impl Bot {
         moves.into_iter().nth(i).unwrap()
     }
 
-    fn evaluate(&mut self, board: &Board) -> f32 {
+    fn evaluate_position(&mut self, board: &Board) -> f32 {
         if let Some(eval_value) = self.evaluation_cache.get(&board.zobrist) {
             return *eval_value;
         }
@@ -64,6 +65,43 @@ impl Bot {
         values[Color::WHITE] - values[Color::BLACK]
     }
 
+    fn quiescence(
+        &mut self,
+        mut alpha: f32,
+        beta: f32,
+        board: &Board,
+        move_gen_masks: &MoveGenMasks,
+        hasher: &ZobristHasher,
+    ) -> f32 {
+        let mut best_value = self.evaluate_position(board);
+
+        if best_value >= beta {
+            return beta;
+        }
+
+        if best_value > alpha {
+            alpha = best_value;
+        }
+
+        let capture_moves = board.get_capture_moves(move_gen_masks, hasher);
+
+        for (_, new_board) in capture_moves {
+            let score = -self.quiescence(alpha, beta, &new_board, move_gen_masks, hasher);
+            if score >= beta {
+                return score;
+            }
+            if score > best_value {
+                best_value = score;
+            }
+
+            if score > alpha {
+                alpha = score
+            }
+        }
+
+        best_value
+    }
+
     fn alpha_beta(
         &mut self,
         board: &Board,
@@ -74,8 +112,7 @@ impl Bot {
         depth: u8,
     ) -> f32 {
         if depth == self.max_depth {
-            // TODO: Impl quiesce
-            // return quiesce( alpha, beta );
+            return self.quiescence(alpha, beta, board, move_gen_masks, hasher);
         }
         let mut best_value = f32::NEG_INFINITY;
         for (_, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
@@ -93,6 +130,32 @@ impl Bot {
         }
 
         best_value
+    }
+
+    fn get_best_move(
+        &mut self,
+        board: &Board,
+        move_gen_masks: &MoveGenMasks,
+        hasher: &ZobristHasher,
+    ) -> (Move, Board) {
+        let best_score = f32::NEG_INFINITY;
+        let mut best_move = Move::new();
+        let mut best_board = Board::empty();
+        for (new_move, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
+            let score = self.alpha_beta(
+                &new_board,
+                move_gen_masks,
+                hasher,
+                f32::NEG_INFINITY,
+                f32::INFINITY,
+                1,
+            );
+            if score > best_score {
+                best_move = new_move;
+                best_board = new_board;
+            }
+        }
+        (best_move, best_board)
     }
 }
 
@@ -119,16 +182,16 @@ mod test_bot_evaluation {
     }
 
     #[test]
-    fn test_evaluate() {
+    fn test_evaluate_position() {
         let board = Board::default();
         let mut bot = Bot::new(0);
 
         assert_eq!(bot.evaluation_cache.len(), 0);
 
-        assert_eq!(bot.evaluate(&board), 0.);
+        assert_eq!(bot.evaluate_position(&board), 0.);
 
         assert_eq!(bot.evaluation_cache.len(), 1);
-        bot.evaluate(&board);
+        bot.evaluate_position(&board);
         assert_eq!(bot.evaluation_cache.len(), 1);
     }
 }
