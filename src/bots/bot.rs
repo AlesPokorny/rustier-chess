@@ -1,5 +1,5 @@
 use core::f32;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::atomic::Ordering};
 
 use rand::Rng;
 
@@ -13,14 +13,16 @@ use crate::{
     utils::zobrist::{ZobristHash, ZobristHasher},
 };
 
-struct Bot {
+use crate::game::UCI_STOP;
+
+pub struct Bot {
     evaluation_cache: HashMap<ZobristHash, f32>,
     piece_values: [f32; 6],
     max_depth: u8,
 }
 
 impl Bot {
-    fn new(max_depth: u8) -> Self {
+    pub fn new(max_depth: u8) -> Self {
         let mut piece_values = [0.0; 6];
         for (piece, value) in PIECE_VALUES_SETTING {
             piece_values[piece] = value;
@@ -142,6 +144,9 @@ impl Bot {
         let mut best_move = Move::new();
         let mut best_board = Board::empty();
         for (new_move, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
+            if UCI_STOP.load(Ordering::Relaxed) {
+                break;
+            }
             let score = self.alpha_beta(
                 &new_board,
                 move_gen_masks,
@@ -193,5 +198,16 @@ mod test_bot_evaluation {
         assert_eq!(bot.evaluation_cache.len(), 1);
         bot.evaluate_position(&board);
         assert_eq!(bot.evaluation_cache.len(), 1);
+    }
+
+    #[test]
+    fn aaa() {
+        let board = Board::default();
+        let move_gen_masks = MoveGenMasks::load();
+        let hasher = ZobristHasher::load();
+        let mut bot = Bot::new(5);
+
+        let (_, board) = bot.get_best_move(&board, &move_gen_masks, &hasher);
+        println!("{}", board);
     }
 }

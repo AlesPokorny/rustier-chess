@@ -1,7 +1,10 @@
 use crate::types::{piece::Pieces, square::Square};
-use std::fmt::{self, Display};
+use std::{
+    fmt::{self, Display},
+    str::FromStr,
+};
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 /// bit 0..5     destination
 /// bit 6..11    origin
 /// bit 12..13   promotion piece (0 queen, 1 rook, 2 bishop, 3 knight)
@@ -65,6 +68,30 @@ impl Move {
 
     pub fn get_promotion_piece(&self) -> usize {
         ((self.0 & 0x3000) >> 12) as usize
+    }
+    pub fn from_long_str(input: &str) -> Self {
+        let origin = Square::from_str(&input[0..=1]).unwrap();
+        let destination = Square::from_str(&input[2..=3]).unwrap();
+
+        let mut output = Move::from_origin_and_destination(&destination, &origin);
+
+        if let Some(promotion_piece) = input.chars().nth(4) {
+            output.set_promotion(match promotion_piece {
+                'q' => Pieces::QUEEN,
+                'n' => Pieces::KNIGHT,
+                'r' => Pieces::ROOK,
+                'b' => Pieces::BISHOP,
+                _ => panic!("Unexpected promotion piece {}", promotion_piece),
+            });
+        }
+
+        output
+    }
+}
+
+impl PartialEq for Move {
+    fn eq(&self, other: &Self) -> bool {
+        (self.0 & 0x3FFF) == (other.0 & 0x3FFF)
     }
 }
 

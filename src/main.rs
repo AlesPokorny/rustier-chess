@@ -1,14 +1,17 @@
 #![allow(dead_code)]
 
-use board::Board;
-
 mod board;
+mod bots;
+mod game;
 mod magic;
 mod moves;
 mod perft;
 mod types;
 mod utils;
 
+use game::UCIGame;
+
 fn main() {
-    let _ = Board::default();
+    let mut game = UCIGame::new();
+    game.uci_io_loop();
 }

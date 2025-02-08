@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::fmt::{self};
+use std::fmt;
 use std::ops::{Add, Sub};
 use std::str::FromStr;
 
@@ -257,6 +257,24 @@ impl Board {
         new_board.state.increment_full_move();
 
         new_board
+    }
+
+    pub fn check_and_make_move(
+        &mut self,
+        the_move: &Move,
+        move_gen_masks: &MoveGenMasks,
+        hasher: &ZobristHasher,
+    ) -> Option<Board> {
+        self.get_legal_moves(move_gen_masks, hasher)
+            .into_iter()
+            .filter_map(|(possible_move, board)| {
+                if &possible_move == the_move {
+                    Some(board)
+                } else {
+                    None
+                }
+            })
+            .nth(0)
     }
 
     pub fn empty() -> Self {
