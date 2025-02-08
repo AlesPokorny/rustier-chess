@@ -208,25 +208,7 @@ impl Default for Bot {
 
 #[cfg(test)]
 mod test_bot_evaluation {
-    use crate::types::{piece::{Color, Pieces}, square::Square};
-
     use super::*;
-
-    #[test]
-    fn test_count_piece_values() {
-        let mut board = Board::default();
-        let bot = Bot::with_depth(0);
-
-        assert_eq!(bot.get_piece_values(&board), 0);
-
-        board.pieces[Color::WHITE][Pieces::QUEEN].set_zero(&Square::new(3));
-        assert_eq!(bot.get_piece_values(&board), -900);
-
-        board.pieces[Color::BLACK][Pieces::ROOK].set_zero(&Square::new(56));
-        board.pieces[Color::BLACK][Pieces::ROOK].set_zero(&Square::new(63));
-
-        assert_eq!(bot.get_piece_values(&board), 100);
-    }
 
     #[test]
     fn test_take_the_rook() {

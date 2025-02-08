@@ -94,6 +94,8 @@ impl Board {
     pub fn try_move(&self, the_move: &Move, hasher: &ZobristHasher) -> Board {
         let origin = the_move.get_origin();
         let destination = the_move.get_destination();
+        let move_bb =
+            BitBoard::zeros_with_one_bit(&origin) ^ BitBoard::zeros_with_one_bit(&destination);
         let mut move_hash = ZobristHash::new(0_u64);
 
         let is_capture = self.colors[self.state.opponent].read_square(&destination);
@@ -104,8 +106,7 @@ impl Board {
 
         let mut moving_piece_type = 10;
 
-        new_board.colors[new_board.state.turn].set_zero(&origin);
-        new_board.colors[new_board.state.turn].set_one(&destination);
+        new_board.colors[new_board.state.turn] ^= move_bb;
         for (piece_type, piece_bitboard) in new_board.pieces[new_board.state.turn]
             .iter_mut()
             .enumerate()
@@ -116,8 +117,7 @@ impl Board {
                 move_hash ^=
                     hasher.hash_piece_at_square(&piece_type, &new_board.state.turn, &destination);
                 moving_piece_type = piece_type;
-                piece_bitboard.set_zero(&origin);
-                piece_bitboard.set_one(&destination);
+                *piece_bitboard ^= move_bb;
                 if piece_type == Pieces::PAWN {
                     new_board.state.reset_half_move();
                 }
@@ -132,7 +132,7 @@ impl Board {
                 .enumerate()
             {
                 if piece_bitboard.read_square(&destination) {
-                    piece_bitboard.set_zero(&destination);
+                    *piece_bitboard &= !move_bb;
                     move_hash ^= hasher.hash_piece_at_square(
                         &piece_type,
                         &new_board.state.opponent,
@@ -162,15 +162,16 @@ impl Board {
             0 => (),
             1 => {
                 // 1 promotion
-                new_board.clear_piece(&origin, Pieces::PAWN, new_board.state.turn);
-                new_board.clear_piece(&destination, Pieces::PAWN, new_board.state.turn);
+                new_board.pieces[new_board.state.turn][Pieces::PAWN] &= !move_bb;
                 move_hash ^=
                     hasher.hash_piece_at_square(&Pieces::PAWN, &new_board.state.turn, &destination);
-                move_hash ^=
-                    hasher.hash_piece_at_square(&Pieces::PAWN, &new_board.state.turn, &destination);
-                new_board.pieces[new_board.state.turn][the_move.get_promotion_piece()]
-                    .set_one(&destination);
-                new_board.colors[new_board.state.turn].set_one(&destination);
+                let promotion_piece = the_move.get_promotion_piece();
+                new_board.pieces[new_board.state.turn][promotion_piece].set_one(&destination);
+                move_hash ^= hasher.hash_piece_at_square(
+                    &promotion_piece,
+                    &new_board.state.turn,
+                    &destination,
+                );
             }
             2 => {
                 // 2 en passant

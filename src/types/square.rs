@@ -40,7 +40,7 @@ impl Square {
     }
 
     pub fn get_rank(&self) -> u8 {
-        self.0 / 8
+        self.0 >> 3
     }
 
     pub fn get_file(&self) -> u8 {
