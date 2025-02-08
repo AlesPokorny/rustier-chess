@@ -62,6 +62,11 @@ impl Board {
             .collect()
     }
 
+    pub fn is_check(&self, move_gen_masks: &MoveGenMasks) -> bool {
+        let king_square = self.pieces[self.state.turn][Pieces::KING].get_one();
+        is_square_in_check(&king_square, self, move_gen_masks)
+    }
+
     pub fn get_legal_moves(
         &self,
         move_gen_masks: &MoveGenMasks,
@@ -494,5 +499,17 @@ impl fmt::Display for Board {
         write!(f, "     A   B   C   D   E   F   G   H")?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test_aa {
+    use super::Board;
+
+    #[test]
+    fn test_aa() {
+        let board = Board::from_fen("8/8/5K2/5R2/5r2/8/5k2/8 w - - 0 1").unwrap();
+
+        println!("{}", board);
     }
 }

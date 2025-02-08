@@ -1,4 +1,3 @@
-use core::f32;
 use std::{collections::HashMap, sync::atomic::Ordering};
 
 use rand::Rng;
@@ -6,24 +5,24 @@ use rand::Rng;
 use crate::{
     board::Board,
     moves::{move_mask_gen::MoveGenMasks, moves_utils::Move},
-    types::{
-        bitboard::BitBoard,
-        piece::{Color, PIECE_VALUES_SETTING},
-    },
+    types::{bitboard::BitBoard, piece::PIECE_VALUES_SETTING},
     utils::zobrist::{ZobristHash, ZobristHasher},
 };
 
 use crate::game::UCI_STOP;
 
+const MIN_VALUE: i32 = -100000;
+const MAX_VALUE: i32 = 100000;
+
 pub struct Bot {
-    evaluation_cache: HashMap<ZobristHash, f32>,
-    piece_values: [f32; 6],
+    evaluation_cache: HashMap<ZobristHash, i32>,
+    piece_values: [i32; 6],
     max_depth: u8,
 }
 
 impl Bot {
     pub fn with_depth(max_depth: u8) -> Self {
-        let mut piece_values = [0.0; 6];
+        let mut piece_values = [0; 6];
         for (piece, value) in PIECE_VALUES_SETTING {
             piece_values[piece] = value;
         }
@@ -44,41 +43,66 @@ impl Bot {
         moves.into_iter().nth(i).unwrap()
     }
 
-    fn evaluate_position(&mut self, board: &Board) -> f32 {
+    fn evaluate_position(
+        &mut self,
+        board: &Board,
+        move_gen_masks: &MoveGenMasks,
+        hasher: &ZobristHasher,
+    ) -> i32 {
         if let Some(eval_value) = self.evaluation_cache.get(&board.zobrist) {
             return *eval_value;
         }
-        let mut eval_value = 0_f32;
+        let mut eval_value = 0;
+        let n_legal_moves = self.get_number_of_moves(board, move_gen_masks, hasher);
+        if n_legal_moves == 0 {
+            if board.is_check(move_gen_masks) {
+                return MAX_VALUE;
+            } else {
+                return 0;
+            }
+        }
         eval_value += self.get_piece_values(board);
         self.evaluation_cache.insert(board.zobrist, eval_value);
 
         eval_value
     }
 
-    fn get_piece_values(&self, board: &Board) -> f32 {
-        let values: Vec<f32> = board
+    fn get_piece_values(&self, board: &Board) -> i32 {
+        let values: Vec<i32> = board
             .pieces
             .iter()
             .map(|color| {
                 color
                     .iter()
                     .enumerate()
-                    .map(|(piece, bb)| bb.get_ones().len() as f32 * self.piece_values[piece])
-                    .sum::<f32>()
+                    .map(|(piece, bb)| bb.get_ones().len() as i32 * self.piece_values[piece])
+                    .sum::<i32>()
             })
             .collect();
-        values[Color::WHITE] - values[Color::BLACK]
+        values[board.state.opponent] - values[board.state.turn]
+    }
+
+    fn get_number_of_moves(
+        &self,
+        board: &Board,
+        move_gen_masks: &MoveGenMasks,
+        hasher: &ZobristHasher,
+    ) -> i32 {
+        board.get_legal_moves(move_gen_masks, hasher).len() as i32
     }
 
     fn quiescence(
         &mut self,
-        mut alpha: f32,
-        beta: f32,
+        mut alpha: i32,
+        beta: i32,
         board: &Board,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
-    ) -> f32 {
-        let mut best_value = self.evaluate_position(board);
+    ) -> i32 {
+        if UCI_STOP.load(Ordering::Relaxed) {
+            return 0;
+        }
+        let mut best_value = self.evaluate_position(board, move_gen_masks, hasher);
 
         if best_value >= beta {
             return beta;
@@ -112,14 +136,17 @@ impl Bot {
         board: &Board,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
-        mut alpha: f32,
-        beta: f32,
+        mut alpha: i32,
+        beta: i32,
         depth: u8,
-    ) -> f32 {
+    ) -> i32 {
+        if UCI_STOP.load(Ordering::Relaxed) {
+            return 0;
+        }
         if depth == self.max_depth {
             return self.quiescence(alpha, beta, board, move_gen_masks, hasher);
         }
-        let mut best_value = f32::NEG_INFINITY;
+        let mut best_value = MIN_VALUE;
         for (_, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
             let score =
                 -self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, depth + 1);
@@ -143,22 +170,20 @@ impl Bot {
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
     ) -> (Move, Board) {
-        let best_score = f32::NEG_INFINITY;
+        let mut best_score = MIN_VALUE;
         let mut best_move = Move::new();
         let mut best_board = Board::empty();
         for (new_move, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
+            if new_move.to_long_string() == "f5f4" {
+                println!();
+            }
             if UCI_STOP.load(Ordering::Relaxed) {
                 break;
             }
-            let score = self.alpha_beta(
-                &new_board,
-                move_gen_masks,
-                hasher,
-                f32::NEG_INFINITY,
-                f32::INFINITY,
-                1,
-            );
+            let score =
+                self.alpha_beta(&new_board, move_gen_masks, hasher, MIN_VALUE, MAX_VALUE, 1);
             if score > best_score {
+                best_score = score;
                 best_move = new_move;
                 best_board = new_board;
             }
@@ -169,7 +194,7 @@ impl Bot {
 
 impl Default for Bot {
     fn default() -> Self {
-        let mut piece_values = [0.0; 6];
+        let mut piece_values = [0; 6];
         for (piece, value) in PIECE_VALUES_SETTING {
             piece_values[piece] = value;
         }
@@ -192,39 +217,25 @@ mod test_bot_evaluation {
         let mut board = Board::default();
         let bot = Bot::with_depth(0);
 
-        assert_eq!(bot.get_piece_values(&board), 0.);
+        assert_eq!(bot.get_piece_values(&board), 0);
 
         board.pieces[Color::WHITE][Pieces::QUEEN].set_zero(&Square::new(3));
-        assert_eq!(bot.get_piece_values(&board), -9.);
+        assert_eq!(bot.get_piece_values(&board), -900);
 
         board.pieces[Color::BLACK][Pieces::ROOK].set_zero(&Square::new(56));
         board.pieces[Color::BLACK][Pieces::ROOK].set_zero(&Square::new(63));
 
-        assert_eq!(bot.get_piece_values(&board), 1.);
+        assert_eq!(bot.get_piece_values(&board), 100);
     }
 
     #[test]
-    fn test_evaluate_position() {
-        let board = Board::default();
-        let mut bot = Bot::with_depth(0);
-
-        assert_eq!(bot.evaluation_cache.len(), 0);
-
-        assert_eq!(bot.evaluate_position(&board), 0.);
-
-        assert_eq!(bot.evaluation_cache.len(), 1);
-        bot.evaluate_position(&board);
-        assert_eq!(bot.evaluation_cache.len(), 1);
-    }
-
-    #[test]
-    fn aaa() {
-        let board = Board::default();
+    fn test_take_the_rook() {
+        let board = Board::from_fen("8/8/5K2/5R2/5r2/8/5k2/8 w - - 0 1").unwrap();
         let move_gen_masks = MoveGenMasks::load();
         let hasher = ZobristHasher::load();
-        let mut bot = Bot::with_depth(5);
+        let mut bot = Bot::with_depth(4);
 
-        let (_, board) = bot.get_best_move(&board, &move_gen_masks, &hasher);
-        println!("{}", board);
+        let (best_move, _) = bot.get_best_move(&board, &move_gen_masks, &hasher);
+        assert_eq!(best_move.to_long_string(), "f5f4");
     }
 }

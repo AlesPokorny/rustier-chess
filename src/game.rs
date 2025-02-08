@@ -9,7 +9,6 @@ use std::process;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc::{self, Receiver};
 use std::thread;
-use std::time::Duration;
 
 pub static UCI_STOP: AtomicBool = AtomicBool::new(false);
 
@@ -36,7 +35,14 @@ impl UCIGame {
         let io_thread = thread::spawn(move || loop {
             let mut input = String::new();
             stdin().read_line(&mut input).unwrap();
-            tx.send(input.trim().to_owned()).unwrap();
+            input = input.trim().to_owned();
+            if input.as_str() == "stop" {
+                UCI_STOP.store(true, Ordering::Relaxed);
+            } else if input.as_str() == "quit" {
+                process::exit(0);
+            }
+
+            tx.send(input).unwrap();
         });
 
         self.receive_command(rx);
@@ -65,10 +71,10 @@ impl UCIGame {
             "ponderhit" => (), // later (or never)
             "position" => self.uci_position(input),
             "setoption" => (), // later
-            "stop" => UCI_STOP.store(true, Ordering::Relaxed),
+            "stop" => (),      // done in uci_io_loop
             "uci" => self.uci_uci(),
-            "ucinewgame" => (), // not necessary?
-            "quit" => self.uci_quit(),
+            "ucinewgame" => (),                            // not necessary?
+            "quit" => (),                                  // done in uci_io_loop
             "print_board" => println!("\n{}", self.board), // not UCI command
             _ => (),
         }
@@ -110,20 +116,18 @@ impl UCIGame {
         println!("uciok");
     }
 
-    fn uci_quit(&self) {
-        UCI_STOP.store(true, Ordering::Relaxed);
-        thread::sleep(Duration::from_millis(500));
-        process::exit(0);
-    }
-
     fn uci_position(&mut self, mut args: Vec<&str>) {
         let start_pos = args.remove(0);
 
         if start_pos == "startpos" {
             self.board = Board::default()
         } else if start_pos == "fen" {
-            let fen = args.remove(0);
-            self.board = match Board::from_fen(fen) {
+            let mut fen_string = args.remove(0).to_owned();
+            for _ in 0..5 {
+                fen_string.push(' ');
+                fen_string.push_str(args.remove(0));
+            }
+            self.board = match Board::from_fen(&fen_string) {
                 Ok(board) => board,
                 Err(e) => panic!("{}", e),
             };

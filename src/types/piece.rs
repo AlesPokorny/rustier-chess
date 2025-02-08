@@ -1,11 +1,11 @@
 use std::fmt::Display;
 
-pub static PIECE_VALUES_SETTING: [(usize, f32); 5] = [
-    (Pieces::PAWN, 1.),
-    (Pieces::KNIGHT, 3.),
-    (Pieces::BISHOP, 3.),
-    (Pieces::ROOK, 5.),
-    (Pieces::QUEEN, 9.),
+pub static PIECE_VALUES_SETTING: [(usize, i32); 5] = [
+    (Pieces::PAWN, 100),
+    (Pieces::KNIGHT, 300),
+    (Pieces::BISHOP, 300),
+    (Pieces::ROOK, 500),
+    (Pieces::QUEEN, 900),
 ];
 
 pub struct Color;

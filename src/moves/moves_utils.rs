@@ -1,6 +1,7 @@
 use crate::types::{piece::Pieces, square::Square};
 use std::{
     fmt::{self, Display},
+    hash::{Hash, Hasher},
     str::FromStr,
 };
 
@@ -117,6 +118,8 @@ impl PartialEq for Move {
     }
 }
 
+impl Eq for Move {}
+
 impl Default for Move {
     fn default() -> Self {
         Self::new()
@@ -152,5 +155,25 @@ impl Display for Move {
             self.get_destination(),
             promotion_str,
         )
+    }
+}
+
+impl Hash for Move {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u16(self.0);
+    }
+}
+
+impl Hasher for Move {
+    fn finish(&self) -> u64 {
+        self.0 as u64
+    }
+
+    fn write(&mut self, _bytes: &[u8]) {
+        panic!("This hasher only takes u16");
+    }
+
+    fn write_u16(&mut self, i: u16) {
+        self.0 = i;
     }
 }
