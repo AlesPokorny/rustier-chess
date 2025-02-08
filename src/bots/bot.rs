@@ -22,7 +22,7 @@ pub struct Bot {
 }
 
 impl Bot {
-    pub fn new(max_depth: u8) -> Self {
+    pub fn with_depth(max_depth: u8) -> Self {
         let mut piece_values = [0.0; 6];
         for (piece, value) in PIECE_VALUES_SETTING {
             piece_values[piece] = value;
@@ -34,6 +34,9 @@ impl Bot {
         }
     }
 
+    pub fn set_depth(&mut self, max_depth: u8) {
+        self.max_depth = max_depth
+    }
     fn make_random_move(moves: Vec<(Move, BitBoard)>) -> (Move, BitBoard) {
         let mut rng = rand::rng();
         let i = rng.random_range(0..moves.len());
@@ -134,7 +137,7 @@ impl Bot {
         best_value
     }
 
-    fn get_best_move(
+    pub fn get_best_move(
         &mut self,
         board: &Board,
         move_gen_masks: &MoveGenMasks,
@@ -164,6 +167,20 @@ impl Bot {
     }
 }
 
+impl Default for Bot {
+    fn default() -> Self {
+        let mut piece_values = [0.0; 6];
+        for (piece, value) in PIECE_VALUES_SETTING {
+            piece_values[piece] = value;
+        }
+        Self {
+            evaluation_cache: HashMap::with_capacity(1000),
+            piece_values,
+            max_depth: 5,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test_bot_evaluation {
     use crate::types::{piece::Pieces, square::Square};
@@ -173,7 +190,7 @@ mod test_bot_evaluation {
     #[test]
     fn test_count_piece_values() {
         let mut board = Board::default();
-        let bot = Bot::new(0);
+        let bot = Bot::with_depth(0);
 
         assert_eq!(bot.get_piece_values(&board), 0.);
 
@@ -189,7 +206,7 @@ mod test_bot_evaluation {
     #[test]
     fn test_evaluate_position() {
         let board = Board::default();
-        let mut bot = Bot::new(0);
+        let mut bot = Bot::with_depth(0);
 
         assert_eq!(bot.evaluation_cache.len(), 0);
 
@@ -205,7 +222,7 @@ mod test_bot_evaluation {
         let board = Board::default();
         let move_gen_masks = MoveGenMasks::load();
         let hasher = ZobristHasher::load();
-        let mut bot = Bot::new(5);
+        let mut bot = Bot::with_depth(5);
 
         let (_, board) = bot.get_best_move(&board, &move_gen_masks, &hasher);
         println!("{}", board);

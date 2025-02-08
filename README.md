@@ -2,6 +2,7 @@
 
 ## TODO:
  - [ ] Change board to make / unmake move
+ - [ ] Change to loop search instead of recursiveness
  - [X] Quiescence
  - [ ] Proper evaluation function (https://www.chessprogramming.org/Evaluation)
    - [ ] Move ordering
@@ -13,3 +14,4 @@
  - [ ] Syzygy endgame tables
  - [ ] Repetition draw
  - [ ] Checkmate
+ - [ ] Time control

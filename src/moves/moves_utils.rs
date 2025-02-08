@@ -87,6 +87,28 @@ impl Move {
 
         output
     }
+
+    pub fn to_long_string(&self) -> String {
+        let origin = self.get_origin();
+        let destination = self.get_destination();
+        let mut output = "".to_owned();
+        output.push_str(&origin.to_string());
+        output.push_str(&destination.to_string());
+
+        if self.special_move() != 1 {
+            return output;
+        }
+
+        let promotion_piece = match self.get_promotion_piece() {
+            Pieces::QUEEN => "q",
+            Pieces::KNIGHT => "n",
+            Pieces::ROOK => "r",
+            Pieces::BISHOP => "b",
+            _ => panic!("Unexpected promotion piece {}", self.get_promotion_piece()),
+        };
+        output.push_str(promotion_piece);
+        output
+    }
 }
 
 impl PartialEq for Move {

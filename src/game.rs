@@ -25,7 +25,7 @@ impl UCIGame {
         Self {
             move_gen_masks: MoveGenMasks::load(),
             hasher: ZobristHasher::load(),
-            bot: Bot::new(5),
+            bot: Bot::default(),
             board: Board::default(),
         }
     }
@@ -74,8 +74,33 @@ impl UCIGame {
         }
     }
 
-    fn uci_go(&self, args: Vec<&str>) {
+    fn uci_go(&mut self, args: Vec<&str>) {
         UCI_STOP.store(false, Ordering::Relaxed);
+
+        for i in 0..args.len() {
+            match args[i] {
+                "infinite" => self.bot.set_depth(u8::MAX),
+                "searchmoves" => (),
+                "ponder" => (),
+                "wtime" => (),
+                "btime" => (),
+                "winc" => (),
+                "binc" => (),
+                "movestogo" => (),
+                "depth" => self.bot.set_depth(args[i + 1].parse::<u8>().unwrap()),
+                "nodes" => (),
+                "mate" => (),
+                "movetime" => (),
+                _ => continue,
+            }
+        }
+
+        let (bot_move, new_board) =
+            self.bot
+                .get_best_move(&self.board, &self.move_gen_masks, &self.hasher);
+        self.board = new_board;
+        println!("bestmove {}", bot_move.to_long_string());
+        println!("{}", self.board);
     }
 
     fn uci_uci(&self) {
