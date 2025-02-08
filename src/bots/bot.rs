@@ -208,7 +208,7 @@ impl Default for Bot {
 
 #[cfg(test)]
 mod test_bot_evaluation {
-    use crate::types::{piece::Pieces, square::Square};
+    use crate::types::{piece::{Color, Pieces}, square::Square};
 
     use super::*;
 
