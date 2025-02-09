@@ -28,6 +28,14 @@ pub struct Board {
 }
 
 impl Board {
+    pub fn new(hasher: &ZobristHasher) -> Self {
+        Self::from_fen(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            hasher,
+        )
+        .unwrap()
+    }
+
     pub fn clear_piece(&mut self, square: &Square, piece: usize, color: usize) {
         self.colors[color].set_zero(square);
         self.pieces[color][piece].set_zero(square);
@@ -155,7 +163,10 @@ impl Board {
             }
         }
 
-        move_hash ^= hasher.hash_en_passant(&new_board, new_board.state.turn);
+        if self.state.en_passant.is_some() {
+            move_hash ^= hasher.hash_en_passant(self, self.state.turn);
+        }
+
         new_board.state.en_passant = None;
 
         match the_move.special_move() {
@@ -207,9 +218,12 @@ impl Board {
                     new_board.state.turn,
                 );
                 move_hash ^=
-                    hasher.hash_piece_at_square(&Pieces::ROOK, &new_board.state.turn, &origin);
-                move_hash ^=
-                    hasher.hash_piece_at_square(&Pieces::ROOK, &new_board.state.turn, &destination);
+                    hasher.hash_piece_at_square(&Pieces::ROOK, &new_board.state.turn, &rook_origin);
+                move_hash ^= hasher.hash_piece_at_square(
+                    &Pieces::ROOK,
+                    &new_board.state.turn,
+                    &rook_destination,
+                );
             }
             _ => panic!("Boom, invalid special move"),
         }
@@ -254,10 +268,10 @@ impl Board {
                     .castling
                     .remove_color_castling(new_board.state.turn);
                 move_hash ^= hasher.hash_castling_color(new_board.state.turn);
-                move_hash ^= hasher.hash_castling_color(new_board.state.turn);
             }
         }
 
+        move_hash ^= hasher.turn_hash();
         new_board.zobrist ^= move_hash;
         new_board.sync_all_pieces();
         new_board.state.increment_full_move();
@@ -266,21 +280,17 @@ impl Board {
     }
 
     pub fn check_and_make_move(
-        &mut self,
+        &self,
         the_move: &Move,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
     ) -> Option<Board> {
-        self.get_legal_moves(move_gen_masks, hasher)
-            .into_iter()
-            .filter_map(|(possible_move, board)| {
-                if &possible_move == the_move {
-                    Some(board)
-                } else {
-                    None
-                }
-            })
-            .nth(0)
+        for (possible_move, board) in self.get_legal_moves(move_gen_masks, hasher) {
+            if &possible_move == the_move {
+                return Some(board);
+            }
+        }
+        None
     }
 
     pub fn empty() -> Self {
@@ -314,7 +324,7 @@ impl Board {
         self.state.en_passant.is_some_and(|x| &x == square)
     }
 
-    pub fn from_fen(fen: &str) -> Result<Self, Box<dyn Error>> {
+    pub fn from_fen(fen: &str, hasher: &ZobristHasher) -> Result<Self, Box<dyn Error>> {
         let fen_parts: Vec<&str> = fen.trim().split(" ").collect();
 
         if fen_parts.len() != 6 {
@@ -389,7 +399,7 @@ impl Board {
         }
 
         let all_pieces = colors[0] | colors[1];
-        let turn = if fen_parts[1] == "w" {
+        let turn = if fen_parts[1].to_ascii_lowercase() == "w" {
             Color::WHITE
         } else {
             Color::BLACK
@@ -435,13 +445,14 @@ impl Board {
             opponent,
         };
 
-        let board = Self {
+        let mut board = Self {
             colors,
             pieces,
             all_pieces,
             state,
-            zobrist: ZobristHash::new(0x463b96181691fc9c), // default board hash with polyglot randoms
+            zobrist: ZobristHash::new(0), // default board hash with polyglot randoms
         };
+        board.zobrist = hasher.hash_everyting(&board);
 
         Ok(board)
     }
@@ -475,12 +486,6 @@ impl Board {
     }
 }
 
-impl Default for Board {
-    fn default() -> Self {
-        Self::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap()
-    }
-}
-
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for row in 0..8_u8 {
@@ -500,17 +505,5 @@ impl fmt::Display for Board {
         write!(f, "     A   B   C   D   E   F   G   H")?;
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod test_aa {
-    use super::Board;
-
-    #[test]
-    fn test_aa() {
-        let board = Board::from_fen("8/8/5K2/5R2/5r2/8/5k2/8 w - - 0 1").unwrap();
-
-        println!("{}", board);
     }
 }

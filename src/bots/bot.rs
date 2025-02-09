@@ -174,9 +174,6 @@ impl Bot {
         let mut best_move = Move::new();
         let mut best_board = Board::empty();
         for (new_move, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
-            if new_move.to_long_string() == "f5f4" {
-                println!();
-            }
             if UCI_STOP.load(Ordering::Relaxed) {
                 break;
             }
@@ -212,9 +209,9 @@ mod test_bot_evaluation {
 
     #[test]
     fn test_take_the_rook() {
-        let board = Board::from_fen("8/8/5K2/5R2/5r2/8/5k2/8 w - - 0 1").unwrap();
         let move_gen_masks = MoveGenMasks::load();
         let hasher = ZobristHasher::load();
+        let board = Board::from_fen("8/8/5K2/5R2/5r2/8/5k2/8 w - - 0 1", &hasher).unwrap();
         let mut bot = Bot::with_depth(4);
 
         let (best_move, _) = bot.get_best_move(&board, &move_gen_masks, &hasher);

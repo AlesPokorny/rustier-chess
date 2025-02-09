@@ -21,11 +21,12 @@ pub struct UCIGame {
 
 impl UCIGame {
     pub fn new() -> Self {
+        let hasher = ZobristHasher::load();
         Self {
             move_gen_masks: MoveGenMasks::load(),
             hasher: ZobristHasher::load(),
             bot: Bot::default(),
-            board: Board::default(),
+            board: Board::new(&hasher),
         }
     }
 
@@ -120,14 +121,14 @@ impl UCIGame {
         let start_pos = args.remove(0);
 
         if start_pos == "startpos" {
-            self.board = Board::default()
+            self.board = Board::new(&self.hasher)
         } else if start_pos == "fen" {
             let mut fen_string = args.remove(0).to_owned();
             for _ in 0..5 {
                 fen_string.push(' ');
                 fen_string.push_str(args.remove(0));
             }
-            self.board = match Board::from_fen(&fen_string) {
+            self.board = match Board::from_fen(&fen_string, &self.hasher) {
                 Ok(board) => board,
                 Err(e) => panic!("{}", e),
             };

@@ -138,6 +138,15 @@ impl ZobristHasher {
             } else {
                 board.pieces[Color::BLACK][Pieces::PAWN].shift_down(1)
             };
+            let file = square.get_file();
+            if file == 0 {
+                mask.shift_right(1).read_square(&square);
+                return self.array[772 + file as usize];
+            }
+            if file == 7 {
+                mask.shift_left(1).read_square(&square);
+                return self.array[772 + file as usize];
+            }
             if (mask.shift_left(1) | mask.shift_right(1)).read_square(&square) {
                 return self.array[772 + square.get_file() as usize];
             }
@@ -147,10 +156,14 @@ impl ZobristHasher {
 
     pub fn hash_turn(&self, board: &Board) -> ZobristHash {
         if board.state.turn == Color::WHITE {
-            self.array[780]
+            self.turn_hash()
         } else {
             ZobristHash::new(0)
         }
+    }
+
+    pub fn turn_hash(&self) -> ZobristHash {
+        self.array[780]
     }
 
     pub fn hash_everyting(&self, board: &Board) -> ZobristHash {
@@ -172,11 +185,19 @@ impl ZobristHasher {
 
 #[cfg(test)]
 mod test_zobrist {
+    use std::collections::VecDeque;
+
+    use once_cell::sync::Lazy;
+
+    use crate::moves::move_mask_gen::MoveGenMasks;
+
     use super::*;
+
+    static HASHER: Lazy<ZobristHasher> = Lazy::new(ZobristHasher::load);
 
     #[test]
     fn test_zobrist_castling_hash() {
-        let board = Board::default();
+        let board = Board::new(&HASHER);
         let hasher = ZobristHasher::load();
 
         assert_eq!(
@@ -187,7 +208,7 @@ mod test_zobrist {
 
     #[test]
     fn test_zobrist_turn_hash() {
-        let board = Board::default();
+        let board = Board::new(&HASHER);
         let hasher = ZobristHasher::load();
 
         assert_eq!(
@@ -198,7 +219,7 @@ mod test_zobrist {
 
     #[test]
     fn test_zobrist_hash_board() {
-        let board = Board::default();
+        let board = Board::new(&HASHER);
         let hasher = ZobristHasher::load();
 
         assert_eq!(
@@ -209,7 +230,7 @@ mod test_zobrist {
 
     #[test]
     fn test_zobrist_hash_everything_1() {
-        let board = Board::default();
+        let board = Board::new(&HASHER);
         let hasher = ZobristHasher::load();
 
         assert_eq!(
@@ -220,9 +241,11 @@ mod test_zobrist {
 
     #[test]
     fn test_zobrist_hash_everything_2() {
-        let board =
-            Board::from_fen("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2")
-                .unwrap();
+        let board = Board::from_fen(
+            "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2",
+            &HASHER,
+        )
+        .unwrap();
         let hasher = ZobristHasher::load();
 
         assert_eq!(
@@ -233,8 +256,11 @@ mod test_zobrist {
 
     #[test]
     fn test_zobrist_hash_everything_3() {
-        let board =
-            Board::from_fen("rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2").unwrap();
+        let board = Board::from_fen(
+            "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2",
+            &HASHER,
+        )
+        .unwrap();
         let hasher = ZobristHasher::load();
 
         assert_eq!(
@@ -245,9 +271,11 @@ mod test_zobrist {
 
     #[test]
     fn test_zobrist_hash_everything_4() {
-        let board =
-            Board::from_fen("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3")
-                .unwrap();
+        let board = Board::from_fen(
+            "rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3",
+            &HASHER,
+        )
+        .unwrap();
         let hasher = ZobristHasher::load();
 
         assert_eq!(
@@ -258,8 +286,11 @@ mod test_zobrist {
 
     #[test]
     fn test_zobrist_hash_everything_5() {
-        let board =
-            Board::from_fen("rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPPKPPP/RNBQ1BNR b kq - 0 3").unwrap();
+        let board = Board::from_fen(
+            "rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPPKPPP/RNBQ1BNR b kq - 0 3",
+            &HASHER,
+        )
+        .unwrap();
         let hasher = ZobristHasher::load();
 
         assert_eq!(
@@ -270,8 +301,11 @@ mod test_zobrist {
 
     #[test]
     fn test_zobrist_hash_everything_6() {
-        let board =
-            Board::from_fen("rnbq1bnr/ppp1pkpp/8/3pPp2/8/8/PPPPKPPP/RNBQ1BNR w - - 0 4").unwrap();
+        let board = Board::from_fen(
+            "rnbq1bnr/ppp1pkpp/8/3pPp2/8/8/PPPPKPPP/RNBQ1BNR w - - 0 4",
+            &HASHER,
+        )
+        .unwrap();
         let hasher = ZobristHasher::load();
 
         assert_eq!(
@@ -282,9 +316,11 @@ mod test_zobrist {
 
     #[test]
     fn test_zobrist_hash_everything_8() {
-        let board =
-            Board::from_fen("rnbqkbnr/p1pppppp/8/8/PpP4P/8/1P1PPPP1/RNBQKBNR b KQkq c3 0 3")
-                .unwrap();
+        let board = Board::from_fen(
+            "rnbqkbnr/p1pppppp/8/8/PpP4P/8/1P1PPPP1/RNBQKBNR b KQkq c3 0 3",
+            &HASHER,
+        )
+        .unwrap();
         let hasher = ZobristHasher::load();
 
         assert_eq!(
@@ -295,13 +331,43 @@ mod test_zobrist {
 
     #[test]
     fn test_zobrist_hash_everything_9() {
-        let board = Board::from_fen("rnbqkbnr/p1pppppp/8/8/P6P/R1p5/1P1PPPP1/1NBQKBNR b Kkq - 0 4")
-            .unwrap();
+        let board = Board::from_fen(
+            "rnbqkbnr/p1pppppp/8/8/P6P/R1p5/1P1PPPP1/1NBQKBNR b Kkq - 0 4",
+            &HASHER,
+        )
+        .unwrap();
         let hasher = ZobristHasher::load();
 
         assert_eq!(
             hasher.hash_everyting(&board),
             ZobristHash::new(0x5c3f9b829b279560)
         )
+    }
+
+    #[test]
+    fn test_zobrist_hash_moves() {
+        let start_board = Board::new(&HASHER);
+        let move_gen_masks = MoveGenMasks::load();
+        let hasher = ZobristHasher::load();
+
+        let mut queue: VecDeque<(Board, u8)> = VecDeque::from_iter(
+            start_board
+                .get_legal_moves(&move_gen_masks, &hasher)
+                .into_iter()
+                .map(|(_, new_board)| (new_board, 1)),
+        );
+        let max_depth = 5;
+
+        while let Some((board, depth)) = queue.pop_front() {
+            assert_eq!(board.zobrist, hasher.hash_everyting(&board));
+
+            if depth == max_depth {
+                continue;
+            }
+
+            for (_, new_board) in board.get_legal_moves(&move_gen_masks, &hasher) {
+                queue.push_back((new_board, depth + 1));
+            }
+        }
     }
 }

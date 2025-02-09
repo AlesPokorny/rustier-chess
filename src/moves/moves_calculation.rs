@@ -51,8 +51,8 @@ pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
         }
     }
 
+    let new_rank = new_square.get_rank() as i8;
     for offset in [1, -1] {
-        let new_rank = square.get_rank() as i8 + direction;
         let new_file = square.get_file() as i8 + offset;
         if !(0..=7).contains(&new_file) {
             continue;
@@ -269,14 +269,18 @@ pub fn get_all_moves(board: &Board, move_gen_masks: &MoveGenMasks) -> Vec<Move> 
 mod test_move_calculation {
     use std::str::FromStr;
 
-    use crate::{board::Board, types::square::Square};
+    use once_cell::sync::Lazy;
+
+    use crate::{board::Board, types::square::Square, utils::zobrist::ZobristHasher};
 
     use super::*;
+
+    static HASHER: Lazy<ZobristHasher> = Lazy::new(ZobristHasher::load);
 
     #[test]
     fn test_get_white_pawn_moves() {
         let square = Square::new(8);
-        let board = Board::default();
+        let board = Board::new(&HASHER);
 
         let moves = get_pawn_moves(square, &board);
 
@@ -292,7 +296,7 @@ mod test_move_calculation {
     #[test]
     fn test_get_black_pawn_moves() {
         let square = Square::from_str("b7").unwrap();
-        let mut board = Board::default();
+        let mut board = Board::new(&HASHER);
         board.state.change_turn();
 
         let moves = get_pawn_moves(square, &board);
@@ -309,9 +313,11 @@ mod test_move_calculation {
 
     #[test]
     fn test_is_square_in_check() {
-        let board =
-            Board::from_fen("r1bqkbnr/pp1p1ppp/2n1p3/2p5/4P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 0 4")
-                .unwrap();
+        let board = Board::from_fen(
+            "r1bqkbnr/pp1p1ppp/2n1p3/2p5/4P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 0 4",
+            &HASHER,
+        )
+        .unwrap();
         let move_gen_masks = MoveGenMasks::load();
 
         let in_check_positions = ["a5", "d5", "e5", "f5", "e7", "d6", "f6", "d5", "h4"];
@@ -331,9 +337,11 @@ mod test_move_calculation {
 
     #[test]
     fn test_get_castling_moves_black() {
-        let board =
-            Board::from_fen("r3k2r/pbpq1ppp/1pnp1n2/2b1p3/4P3/1PNB1N2/PBPPQPPP/R3K2R b KQkq - 3 9")
-                .unwrap();
+        let board = Board::from_fen(
+            "r3k2r/pbpq1ppp/1pnp1n2/2b1p3/4P3/1PNB1N2/PBPPQPPP/R3K2R b KQkq - 3 9",
+            &HASHER,
+        )
+        .unwrap();
         let move_gen_masks = MoveGenMasks::load();
         let king_square = board.pieces[Color::BLACK][Pieces::KING].get_one();
 
@@ -354,6 +362,7 @@ mod test_move_calculation {
     fn test_get_castling_moves_white() {
         let board = Board::from_fen(
             "r1b1k2r/pppq1ppp/3p1n2/2b1p3/3nP3/1PNB1N2/PBPPQPPP/R3K2R w KQkq - 6 8",
+            &HASHER,
         )
         .unwrap();
         let move_gen_masks = MoveGenMasks::load();
@@ -374,7 +383,7 @@ mod test_move_calculation {
 
     #[test]
     fn test_get_all_moves() {
-        let mut board = Board::default();
+        let mut board = Board::new(&HASHER);
         board.state.change_turn();
         let move_gen_masks = MoveGenMasks::load();
 
