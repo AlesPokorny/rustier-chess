@@ -11,6 +11,8 @@ use crate::{
 
 use crate::game::UCI_STOP;
 
+use super::pesto::PeSTO;
+
 const MIN_VALUE: i32 = -100000;
 const MAX_VALUE: i32 = 100000;
 
@@ -18,6 +20,7 @@ pub struct Bot {
     evaluation_cache: HashMap<ZobristHash, i32>,
     piece_values: [i32; 6],
     max_depth: u8,
+    pesto: PeSTO,
 }
 
 impl Bot {
@@ -30,6 +33,7 @@ impl Bot {
             evaluation_cache: HashMap::with_capacity(1000),
             piece_values,
             max_depth,
+            pesto: PeSTO::default(),
         }
     }
 
@@ -61,7 +65,8 @@ impl Bot {
                 return 0;
             }
         }
-        eval_value += self.get_piece_values(board);
+        // eval_value += self.get_piece_values(board);
+        eval_value += self.pesto.calculate_score(board);
         eval_value += n_legal_moves;
         self.evaluation_cache.insert(board.zobrist, eval_value);
 
@@ -198,6 +203,7 @@ impl Default for Bot {
             evaluation_cache: HashMap::with_capacity(1000),
             piece_values,
             max_depth: 5,
+            pesto: PeSTO::default(),
         }
     }
 }
@@ -226,5 +232,12 @@ mod test_bot_evaluation {
 
         // let (best_move, _) = bot.get_best_move(&board, &move_gen_masks, &hasher);
         // assert_eq!(best_move.to_long_string(), "f5f4");
+    }
+
+    #[test]
+    fn test_a() {
+        for i in 0..64 {
+            println!("{}", i ^ 56);
+        }
     }
 }

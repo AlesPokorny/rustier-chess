@@ -159,13 +159,8 @@ impl State {
     }
 
     pub fn change_turn(&mut self) {
-        if self.turn == 0 {
-            self.turn = 1;
-            self.opponent = 0;
-        } else {
-            self.turn = 0;
-            self.opponent = 1;
-        }
+        self.opponent = self.turn;
+        self.turn ^= 1;
     }
 
     pub fn remove_castling_rights(&mut self, color: usize, side: usize) {

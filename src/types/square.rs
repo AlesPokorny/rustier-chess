@@ -50,6 +50,10 @@ impl Square {
     pub fn get_bit_index(&self) -> u8 {
         self.0.trailing_zeros() as u8
     }
+
+    pub fn flip(&self) -> u8 {
+        self.0 ^ 56
+    }
 }
 
 impl FromStr for Square {

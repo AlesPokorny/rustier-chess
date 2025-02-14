@@ -528,7 +528,7 @@ impl Board {
         fen
     }
 
-    fn get_piece_on_square(&self, square: &Square) -> Option<Piece> {
+    pub fn get_piece_on_square(&self, square: &Square) -> Option<Piece> {
         let mut piece_color: usize = 3;
         for (i, color) in self.colors.iter().enumerate() {
             if color.read_square(square) {

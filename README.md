@@ -5,7 +5,7 @@
  - [X] Quiescence
  - [ ] Proper evaluation function (https://www.chessprogramming.org/Evaluation)
    - [ ] Move ordering
-   - [ ] PeSTO
+   - [X] PeSTO
    - [ ] Mobility
      - [X] Basic mobility
      - [ ] Something smart ish?
