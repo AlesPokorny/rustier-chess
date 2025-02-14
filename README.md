@@ -7,6 +7,8 @@
    - [ ] Move ordering
    - [ ] PeSTO
    - [ ] Mobility
+     - [X] Basic mobility
+     - [ ] Something smart ish?
    - [ ] King Safety
  - [ ] UCI (https://www.wbec-ridderkerk.nl/html/UCIProtocol.html)
    - [X] ish

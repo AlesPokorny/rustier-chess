@@ -62,6 +62,7 @@ impl Bot {
             }
         }
         eval_value += self.get_piece_values(board);
+        eval_value += n_legal_moves;
         self.evaluation_cache.insert(board.zobrist, eval_value);
 
         eval_value
