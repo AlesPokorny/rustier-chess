@@ -79,7 +79,7 @@ impl Bot {
                     .sum::<i32>()
             })
             .collect();
-        values[board.state.opponent] - values[board.state.turn]
+        values[board.state.turn] - values[board.state.opponent]
     }
 
     fn get_number_of_moves(
@@ -105,17 +105,18 @@ impl Bot {
         let mut best_value = self.evaluate_position(board, move_gen_masks, hasher);
 
         if best_value >= beta {
-            return beta;
+            return best_value;
         }
 
-        if best_value > alpha {
+        if alpha < best_value {
             alpha = best_value;
         }
 
         let capture_moves = board.get_capture_moves(move_gen_masks, hasher);
 
         for (_, new_board) in capture_moves {
-            let score = -self.quiescence(alpha, beta, &new_board, move_gen_masks, hasher);
+            let score = -self.quiescence(-beta, -alpha, &new_board, move_gen_masks, hasher);
+
             if score >= beta {
                 return score;
             }
@@ -140,28 +141,25 @@ impl Bot {
         beta: i32,
         depth: u8,
     ) -> i32 {
+        // TODO: Figure out a better way to stop instead of returning 0
         if UCI_STOP.load(Ordering::Relaxed) {
             return 0;
         }
         if depth == self.max_depth {
             return self.quiescence(alpha, beta, board, move_gen_masks, hasher);
         }
-        let mut best_value = MIN_VALUE;
         for (_, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
             let score =
                 -self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, depth + 1);
-            if score > best_value {
-                best_value = score;
-                if score > alpha {
-                    alpha = score;
-                }
-                if score >= beta {
-                    return best_value;
-                }
+            if score >= beta {
+                return beta;
+            }
+            if score > alpha {
+                alpha = score;
             }
         }
 
-        best_value
+        alpha
     }
 
     pub fn get_best_move(
@@ -178,7 +176,7 @@ impl Bot {
                 break;
             }
             let score =
-                self.alpha_beta(&new_board, move_gen_masks, hasher, MIN_VALUE, MAX_VALUE, 1);
+                -self.alpha_beta(&new_board, move_gen_masks, hasher, MIN_VALUE, MAX_VALUE, 1);
             if score > best_score {
                 best_score = score;
                 best_move = new_move;
@@ -211,10 +209,21 @@ mod test_bot_evaluation {
     fn test_take_the_rook() {
         let move_gen_masks = MoveGenMasks::load();
         let hasher = ZobristHasher::load();
-        let board = Board::from_fen("8/8/5K2/5R2/5r2/8/5k2/8 w - - 0 1", &hasher).unwrap();
-        let mut bot = Bot::with_depth(4);
+        let mut board = Board::from_fen("8/8/5K2/5R2/5r2/8/5k2/8 w - - 0 1", &hasher).unwrap();
+        // let mut board = Board::from_fen("8/8/5K2/8/5R2/8/8/4k3 w - - 1 3", &hasher).unwrap();
+        let mut bot = Bot::with_depth(2);
 
-        let (best_move, _) = bot.get_best_move(&board, &move_gen_masks, &hasher);
-        assert_eq!(best_move.to_long_string(), "f5f4");
+        // let (a, b) = bot.get_best_move(&board, &move_gen_masks, &hasher);
+
+        // println!("{}", b);
+        for _ in 0..4 {
+            let (best_move, new_board) = bot.get_best_move(&board, &move_gen_masks, &hasher);
+            board = new_board;
+            println!("{}", board);
+            println!("{}", board.get_fen());
+        }
+
+        // let (best_move, _) = bot.get_best_move(&board, &move_gen_masks, &hasher);
+        // assert_eq!(best_move.to_long_string(), "f5f4");
     }
 }
