@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::atomic::Ordering};
 
+use itertools::Itertools;
 use rand::Rng;
 
 use crate::{
@@ -104,15 +105,17 @@ impl Bot {
         board: &Board,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
-    ) -> i32 {
+    ) -> (i32, usize) {
         if UCI_STOP.load(Ordering::Relaxed) {
-            return 0;
+            return (0, 0);
         }
         let mut best_value = self.evaluate_position(board, move_gen_masks, hasher);
 
         if best_value >= beta {
-            return best_value;
+            return (best_value, 1);
         }
+
+        let mut nodes_checked = 0;
 
         if alpha < best_value {
             alpha = best_value;
@@ -121,10 +124,13 @@ impl Bot {
         let capture_moves = board.get_capture_moves(move_gen_masks, hasher);
 
         for (_, new_board) in capture_moves {
-            let score = -self.quiescence(-beta, -alpha, &new_board, move_gen_masks, hasher);
+            let (opponent_score, nodes) =
+                self.quiescence(-beta, -alpha, &new_board, move_gen_masks, hasher);
+            let score = -opponent_score;
+            nodes_checked += nodes;
 
             if score >= beta {
-                return score;
+                return (score, nodes_checked);
             }
             if score > best_value {
                 best_value = score;
@@ -135,7 +141,7 @@ impl Bot {
             }
         }
 
-        best_value
+        (best_value, nodes_checked)
     }
 
     fn alpha_beta(
@@ -146,26 +152,30 @@ impl Bot {
         mut alpha: i32,
         beta: i32,
         depth: u8,
-    ) -> i32 {
+    ) -> (i32, usize) {
         // TODO: Figure out a better way to stop instead of returning 0
         if UCI_STOP.load(Ordering::Relaxed) {
-            return 0;
+            return (0, 0);
         }
         if depth == self.max_depth {
             return self.quiescence(alpha, beta, board, move_gen_masks, hasher);
         }
+        let mut nodes_checked = 0;
         for (_, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
-            let score =
-                -self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, depth + 1);
+            let (opponent_score, nodes) =
+                self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, depth + 1);
+            let score = -opponent_score;
+            nodes_checked += nodes;
+
             if score >= beta {
-                return beta;
+                return (beta, nodes_checked);
             }
             if score > alpha {
                 alpha = score;
             }
         }
 
-        alpha
+        (alpha, nodes_checked)
     }
 
     pub fn get_best_move(
@@ -174,22 +184,25 @@ impl Bot {
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
     ) -> (Move, Board) {
-        let mut best_score = MIN_VALUE;
-        let mut best_move = Move::new();
-        let mut best_board = Board::empty();
+        let mut results: Vec<(i32, Move, Board)> = Vec::with_capacity(100);
+        let mut nodes_checked = 0;
         for (new_move, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
             if UCI_STOP.load(Ordering::Relaxed) {
                 break;
             }
-            let score =
-                -self.alpha_beta(&new_board, move_gen_masks, hasher, MIN_VALUE, MAX_VALUE, 1);
-            if score > best_score {
-                best_score = score;
-                best_move = new_move;
-                best_board = new_board;
-            }
+            let (opponent_score, nodes) =
+                self.alpha_beta(&new_board, move_gen_masks, hasher, MIN_VALUE, MAX_VALUE, 1);
+            results.push((-opponent_score, new_move, new_board));
+            nodes_checked += nodes;
         }
-        (best_move, best_board)
+
+        println!("Checked {} nodes", nodes_checked);
+        results
+            .into_iter()
+            .sorted_by_key(|(score, _, _)| -score)
+            .map(|(_, best_move, board)| (best_move, board))
+            .nth(0)
+            .unwrap()
     }
 }
 
