@@ -1,6 +1,5 @@
 use std::{collections::HashMap, sync::atomic::Ordering};
 
-use itertools::Itertools;
 use rand::Rng;
 
 use crate::{
@@ -184,25 +183,27 @@ impl Bot {
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
     ) -> (Move, Board) {
-        let mut results: Vec<(i32, Move, Board)> = Vec::with_capacity(100);
         let mut nodes_checked = 0;
+        let mut best_move: (Move, Board) = (Move::new(), *board);
+        let mut alpha = MIN_VALUE;
+        let beta = MAX_VALUE;
+
         for (new_move, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
             if UCI_STOP.load(Ordering::Relaxed) {
                 break;
             }
             let (opponent_score, nodes) =
-                self.alpha_beta(&new_board, move_gen_masks, hasher, MIN_VALUE, MAX_VALUE, 1);
-            results.push((-opponent_score, new_move, new_board));
+                self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, 1);
+            let score = -opponent_score;
+            if score > alpha {
+                alpha = score;
+                best_move = (new_move, new_board);
+            }
             nodes_checked += nodes;
         }
 
         println!("Checked {} nodes", nodes_checked);
-        results
-            .into_iter()
-            .sorted_by_key(|(score, _, _)| -score)
-            .map(|(_, best_move, board)| (best_move, board))
-            .nth(0)
-            .unwrap()
+        best_move
     }
 }
 

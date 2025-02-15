@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use rustier_chess::{
-    board::Board, bots::bot::Bot, moves::move_mask_gen::MoveGenMasks, utils::zobrist::ZobristHasher
+    board::Board, bots::bot::Bot, moves::move_mask_gen::MoveGenMasks, utils::zobrist::ZobristHasher,
 };
 
 fn main() {
