@@ -12,7 +12,7 @@ use crate::{
 
 use crate::game::UCI_STOP;
 
-use super::pesto::PeSTO;
+use super::{pesto::PeSTO, transposition::{TranspositionEntry, TranspositionEntryType, TranspositionTable}};
 
 const MIN_VALUE: i32 = -100000;
 const MAX_VALUE: i32 = 100000;
@@ -22,6 +22,7 @@ pub struct Bot {
     piece_values: [i32; 6],
     max_depth: u8,
     pesto: PeSTO,
+    tt: TranspositionTable,
 }
 
 impl Bot {
@@ -35,6 +36,7 @@ impl Bot {
             piece_values,
             max_depth,
             pesto: PeSTO::default(),
+            tt: TranspositionTable::default(),
         }
     }
 
@@ -157,17 +159,58 @@ impl Bot {
         if UCI_STOP.load(Ordering::Relaxed) {
             return (0, 0);
         }
+
+        if let Some(entry) = self.tt.get(&board.zobrist) {
+            if entry.depth >= self.max_depth - depth {
+                match entry.flag {
+                    TranspositionEntryType::Exact => {
+                        return (entry.score, 1);
+                    }
+                    TranspositionEntryType::Alpha => {
+                        if entry.score <= alpha {
+                            return (alpha, 1);
+                        }
+                    }
+                    TranspositionEntryType::Beta => {
+                        if entry.score >= beta {
+                            return (beta, 1);
+                        }
+                    }
+                }
+            }
+        }
+
         if depth == self.max_depth {
-            return self.quiescence(alpha, beta, board, move_gen_masks, hasher);
+            let (score, nodes) = self.quiescence(alpha, beta, board, move_gen_masks, hasher);
+            self.tt.insert(
+                TranspositionEntry::new(
+                    board.zobrist,
+                    0,
+                    TranspositionEntryType::Exact,
+                    score,
+                    None,
+                )
+            );
+
+            return (score, nodes)
         }
         let mut nodes_checked = 0;
-        for (_, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
+        for (best_move, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
             let (opponent_score, nodes) =
                 self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, depth + 1);
             let score = -opponent_score;
             nodes_checked += nodes;
 
             if score >= beta {
+                let entry = TranspositionEntry::new(
+                    board.zobrist,
+                    self.max_depth - depth,
+                    TranspositionEntryType::Beta,
+                    beta,
+                    Some(best_move),
+                );
+                self.tt.insert(entry);
+
                 return (beta, nodes_checked);
             }
             if score > alpha {
@@ -175,6 +218,15 @@ impl Bot {
             }
         }
 
+        self.tt.insert(
+        TranspositionEntry::new(
+            board.zobrist,
+            self.max_depth - depth,
+            TranspositionEntryType::Exact,
+            alpha,
+            None,
+            )
+        );
         (alpha, nodes_checked)
     }
 
@@ -217,6 +269,7 @@ impl Default for Bot {
             piece_values,
             max_depth: 5,
             pesto: PeSTO::default(),
+            tt: TranspositionTable::default(),
         }
     }
 }
