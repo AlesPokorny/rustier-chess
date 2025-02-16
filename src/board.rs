@@ -1,3 +1,4 @@
+use core::hash;
 use std::error::Error;
 use std::fmt;
 use std::ops::{Add, Sub};
@@ -353,6 +354,7 @@ impl Board {
     ) {
         for possible_move in self.get_legal_moves(move_gen_masks, hasher) {
             if &possible_move == the_move {
+                self.make_move(&possible_move, hasher);
                 return;
             }
         }

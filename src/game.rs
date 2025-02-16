@@ -115,6 +115,7 @@ impl UCIGame {
         let bot_move = self
             .bot
             .get_best_move(&mut self.board, &self.move_gen_masks, &self.hasher);
+        self.board.make_move(&bot_move, &self.hasher);
         println!("bestmove {}", bot_move.to_long_string());
     }
 
