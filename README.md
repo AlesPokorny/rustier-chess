@@ -1,7 +1,7 @@
 # Rustier Chess
 
 ## TODO:
- - [ ] Change board to make / unmake move
+ - [X] Change board to make / unmake move
  - [X] Quiescence
  - [ ] Proper evaluation function (https://www.chessprogramming.org/Evaluation)
    - [ ] Move ordering
@@ -18,3 +18,5 @@
  - [ ] Repetition draw
  - [X] Checkmate
  - [X] Basic Time control
+ - [ ] Clean up pawns
+ - [ ] Clean up checks
