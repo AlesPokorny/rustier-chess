@@ -31,28 +31,12 @@ impl Square {
         self.0 as usize
     }
 
-    pub fn sub(&self, rhs: u8) -> Self {
-        Self(self.0 - rhs)
-    }
-
-    pub fn add(&self, rhs: u8) -> Self {
-        Self(self.0 + rhs)
-    }
-
     pub fn get_rank(&self) -> u8 {
         self.0 >> 3
     }
 
     pub fn get_file(&self) -> u8 {
         self.0 % 8
-    }
-
-    pub fn get_bit_index(&self) -> u8 {
-        self.0.trailing_zeros() as u8
-    }
-
-    pub fn flip(&self) -> u8 {
-        self.0 ^ 56
     }
 }
 

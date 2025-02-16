@@ -10,7 +10,7 @@ pub const BLACK_SHORT_ROOK_STARTING_MASK: BitBoard = BitBoard(0x8000000000000000
 /// bit 2:      black short
 /// bit 3:      black long
 /// bits 4-7:   unused
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Castling(u8);
 
 impl Default for Castling {
@@ -156,6 +156,10 @@ impl State {
     /// Increments after each black move
     pub fn increment_full_move(&mut self) {
         self.full_moves += 1;
+    }
+
+    pub fn restore_full_move(&mut self) {
+        self.full_moves -= 1;
     }
 
     pub fn change_turn(&mut self) {

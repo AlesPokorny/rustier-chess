@@ -112,10 +112,9 @@ impl UCIGame {
 
         self.bot.set_time_control(time_control);
 
-        let (bot_move, new_board) =
-            self.bot
-                .get_best_move(&self.board, &self.move_gen_masks, &self.hasher);
-        self.board = new_board;
+        let bot_move = self
+            .bot
+            .get_best_move(&mut self.board, &self.move_gen_masks, &self.hasher);
         println!("bestmove {}", bot_move.to_long_string());
     }
 
@@ -148,14 +147,8 @@ impl UCIGame {
         if !args.is_empty() && args.remove(0) == "moves" {
             for move_str in args {
                 let move_to_make = Move::from_long_str(move_str);
-                match self.board.check_and_make_move(
-                    &move_to_make,
-                    &self.move_gen_masks,
-                    &self.hasher,
-                ) {
-                    Some(new_board) => self.board = new_board,
-                    None => panic!("Could not make move {}", move_str),
-                }
+                self.board
+                    .check_and_make_move(&move_to_make, &self.move_gen_masks, &self.hasher)
             }
         }
     }
