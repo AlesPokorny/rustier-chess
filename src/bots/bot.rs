@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::atomic::Ordering};
+use std::{collections::HashMap, sync::atomic::Ordering, time::Instant};
 
 use rand::Rng;
 
@@ -60,32 +60,16 @@ impl Bot {
         let n_legal_moves = self.get_number_of_moves(board, move_gen_masks, hasher);
         if n_legal_moves == 0 {
             if board.is_check(move_gen_masks) {
-                return MAX_VALUE;
+                return MIN_VALUE;
             } else {
                 return 0;
             }
         }
-        // eval_value += self.get_piece_values(board);
         eval_value += self.pesto.calculate_score(board);
         eval_value += n_legal_moves;
         self.evaluation_cache.insert(board.zobrist, eval_value);
 
         eval_value
-    }
-
-    fn get_piece_values(&self, board: &Board) -> i32 {
-        let values: Vec<i32> = board
-            .pieces
-            .iter()
-            .map(|color| {
-                color
-                    .iter()
-                    .enumerate()
-                    .map(|(piece, bb)| bb.get_ones().len() as i32 * self.piece_values[piece])
-                    .sum::<i32>()
-            })
-            .collect();
-        values[board.state.turn] - values[board.state.opponent]
     }
 
     fn get_number_of_moves(
@@ -104,7 +88,7 @@ impl Bot {
         board: &Board,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
-    ) -> (i32, usize) {
+    ) -> (i32, u64) {
         if UCI_STOP.load(Ordering::Relaxed) {
             return (0, 0);
         }
@@ -151,18 +135,18 @@ impl Bot {
         mut alpha: i32,
         beta: i32,
         depth: u8,
-    ) -> (i32, usize) {
+    ) -> (i32, u64) {
         // TODO: Figure out a better way to stop instead of returning 0
         if UCI_STOP.load(Ordering::Relaxed) {
             return (0, 0);
         }
-        if depth == self.max_depth {
+        if depth == 0 {
             return self.quiescence(alpha, beta, board, move_gen_masks, hasher);
         }
         let mut nodes_checked = 0;
         for (_, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
             let (opponent_score, nodes) =
-                self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, depth + 1);
+                self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, depth - 1);
             let score = -opponent_score;
             nodes_checked += nodes;
 
@@ -183,17 +167,38 @@ impl Bot {
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
     ) -> (Move, Board) {
+        let mut results: Vec<(Move, Board)> = Vec::with_capacity(self.max_depth as usize);
+
+        for depth in 1..=self.max_depth {
+            let best_move = self.get_best_move_for_depth(depth, board, move_gen_masks, hasher);
+            if UCI_STOP.load(Ordering::Relaxed) {
+                break;
+            }
+            results.push(best_move);
+        }
+        results.into_iter().last().unwrap()
+    }
+
+    pub fn get_best_move_for_depth(
+        &mut self,
+        depth: u8,
+        board: &Board,
+        move_gen_masks: &MoveGenMasks,
+        hasher: &ZobristHasher,
+    ) -> (Move, Board) {
         let mut nodes_checked = 0;
         let mut best_move: (Move, Board) = (Move::new(), *board);
         let mut alpha = MIN_VALUE;
         let beta = MAX_VALUE;
+
+        let start = Instant::now();
 
         for (new_move, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
             if UCI_STOP.load(Ordering::Relaxed) {
                 break;
             }
             let (opponent_score, nodes) =
-                self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, 1);
+                self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, depth);
             let score = -opponent_score;
             if score > alpha {
                 alpha = score;
@@ -201,7 +206,11 @@ impl Bot {
             }
             nodes_checked += nodes;
         }
+        let elapsed = start.elapsed().as_micros();
 
+        println!("info depth {} seldepth {}", depth, self.max_depth);
+		println!("info score cp {}  depth {} nodes {}", alpha, depth, nodes_checked);
+		println!("info nps {}", (nodes_checked as u128 * 1_000_000)/ elapsed);
         println!("Checked {} nodes", nodes_checked);
         best_move
     }
@@ -216,7 +225,7 @@ impl Default for Bot {
         Self {
             evaluation_cache: HashMap::with_capacity(1000),
             piece_values,
-            max_depth: 5,
+            max_depth: 4,
             pesto: PeSTO::default(),
         }
     }

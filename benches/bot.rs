@@ -8,7 +8,7 @@ fn main() {
     let hasher = ZobristHasher::load();
     let move_gen_masks = MoveGenMasks::load();
     let board = Board::new(&hasher);
-    let mut bot = Bot::with_depth(7);
+    let mut bot = Bot::with_depth(6);
 
     let now = Instant::now();
     let _ = bot.get_best_move(&board, &move_gen_masks, &hasher);
