@@ -12,14 +12,6 @@ pub struct Color;
 impl Color {
     pub const WHITE: usize = 0;
     pub const BLACK: usize = 1;
-
-    pub fn other_color(color: usize) -> usize {
-        if color == Self::WHITE {
-            Self::BLACK
-        } else {
-            Self::WHITE
-        }
-    }
 }
 
 pub struct Pieces;

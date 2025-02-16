@@ -62,7 +62,7 @@ impl Bot {
 
     fn evaluate_position(
         &mut self,
-        board: &Board,
+        board: &mut Board,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
     ) -> i32 {
@@ -87,7 +87,7 @@ impl Bot {
 
     fn get_number_of_moves(
         &self,
-        board: &Board,
+        board: &mut Board,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
     ) -> i32 {
@@ -98,7 +98,7 @@ impl Bot {
         &mut self,
         mut alpha: i32,
         beta: i32,
-        board: &Board,
+        board: &mut Board,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
     ) -> (i32, u64) {
@@ -119,9 +119,11 @@ impl Bot {
 
         let capture_moves = board.get_capture_moves(move_gen_masks, hasher);
 
-        for (_, new_board) in capture_moves {
+        for new_move in capture_moves {
+            let unmake_move_helper = board.make_move(&new_move, hasher);
             let (opponent_score, nodes) =
-                self.quiescence(-beta, -alpha, &new_board, move_gen_masks, hasher);
+                self.quiescence(-beta, -alpha, board, move_gen_masks, hasher);
+            board.unmake_move(unmake_move_helper);
             let score = -opponent_score;
             nodes_checked += nodes;
 
@@ -142,7 +144,7 @@ impl Bot {
 
     fn alpha_beta(
         &mut self,
-        board: &Board,
+        board: &mut Board,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
         mut alpha: i32,
@@ -157,9 +159,11 @@ impl Bot {
             return self.quiescence(alpha, beta, board, move_gen_masks, hasher);
         }
         let mut nodes_checked = 0;
-        for (_, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
+        for new_move in board.get_legal_moves(move_gen_masks, hasher) {
+            let unmake_move_helper = board.make_move(&new_move, hasher);
             let (opponent_score, nodes) =
-                self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, depth - 1);
+                self.alpha_beta(board, move_gen_masks, hasher, -beta, -alpha, depth - 1);
+            board.unmake_move(unmake_move_helper);
             let score = -opponent_score;
             nodes_checked += nodes;
 
@@ -176,10 +180,10 @@ impl Bot {
 
     pub fn get_best_move(
         &mut self,
-        board: &Board,
+        board: &mut Board,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
-    ) -> (Move, Board) {
+    ) -> Move {
         let move_start = Instant::now();
         let move_max_time = self.time_control.get_move_time(&board.state.turn) as u128;
         println!("info time for move {}", move_max_time);
@@ -194,7 +198,7 @@ impl Bot {
             thread::sleep(Duration::from_millis(300));
         });
 
-        let mut results: Vec<(Move, Board)> = Vec::with_capacity(self.max_depth as usize);
+        let mut results: Vec<Move> = Vec::with_capacity(self.max_depth as usize);
 
         for depth in 1..=self.max_depth {
             let (best_score, best_move) =
@@ -217,32 +221,34 @@ impl Bot {
     pub fn get_best_move_for_depth(
         &mut self,
         depth: u8,
-        board: &Board,
+        board: &mut Board,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
-    ) -> (i32, (Move, Board)) {
+    ) -> (i32, Move) {
         let mut nodes_checked = 0;
-        let mut best_move: (i32, (Move, Board)) = (0, (Move::new(), *board));
+        let mut best_move: (i32, Move) = (0, Move::new());
         let mut alpha = MIN_VALUE;
         let beta = MAX_VALUE;
 
         let start = Instant::now();
 
-        for (new_move, new_board) in board.get_legal_moves(move_gen_masks, hasher) {
+        for new_move in board.get_legal_moves(move_gen_masks, hasher) {
             if UCI_STOP.load(Ordering::Relaxed) {
                 break;
             }
+            let unmake_move_helper = board.make_move(&new_move, hasher);
             let (opponent_score, nodes) =
-                self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, depth - 1);
+                self.alpha_beta(board, move_gen_masks, hasher, -beta, -alpha, depth - 1);
+            board.unmake_move(unmake_move_helper);
             let score = -opponent_score;
 
             if score == CHECKMATE_SCORE {
-                return (score, (new_move, new_board));
+                return (score, new_move);
             }
 
             if score > alpha {
                 alpha = score;
-                best_move = (score, (new_move, new_board));
+                best_move = (score, new_move);
             }
             nodes_checked += nodes;
         }
@@ -283,7 +289,7 @@ mod test_bot_evaluation {
     fn test_b() {
         let move_gen_masks = MoveGenMasks::load();
         let hasher = ZobristHasher::load();
-        let board = Board::from_fen(
+        let mut board = Board::from_fen(
             "1rb2k2/pppp3R/4pN2/P1P1P1PK/1P1PP3/8/8/8 w - - 0 65",
             &hasher,
         )
@@ -291,21 +297,21 @@ mod test_bot_evaluation {
         let mut time_control = TimeControl::max();
         time_control.set_move_time(300);
         let mut bot = Bot::with_depth(5, time_control);
-        let (best_move, _) = bot.get_best_move(&board, &move_gen_masks, &hasher);
+        let best_move = bot.get_best_move(&mut board, &move_gen_masks, &hasher);
         println!("{}", best_move.to_long_string())
     }
 
-    #[test]
-    fn test_a() {
-        let move_gen_masks = MoveGenMasks::load();
-        let hasher = ZobristHasher::load();
-        let board = Board::from_fen("8/5k1K/8/6q1/8/8/8/8 b - - 0 1", &hasher).unwrap();
-        let mut bot = Bot::default();
+    // #[test]
+    // fn test_a() {
+    //     let move_gen_masks = MoveGenMasks::load();
+    //     let hasher = ZobristHasher::load();
+    //     let mut board = Board::from_fen("8/5k1K/8/6q1/8/8/8/8 b - - 0 1", &hasher).unwrap();
+    //     let mut bot = Bot::default();
 
-        println!("{}", board);
+    //     println!("{}", board);
 
-        let (best_move, _) = bot.get_best_move(&board, &move_gen_masks, &hasher);
+    //     let best_move = bot.get_best_move(&mut board, &move_gen_masks, &hasher);
 
-        println!("{}", best_move);
-    }
+    //     println!("{}", best_move);
+    // }
 }

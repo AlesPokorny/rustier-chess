@@ -346,28 +346,56 @@ mod test_zobrist {
 
     #[test]
     fn test_zobrist_hash_moves() {
-        let start_board = Board::new(&HASHER);
+        let mut board = Board::new(&HASHER);
         let move_gen_masks = MoveGenMasks::load();
         let hasher = ZobristHasher::load();
 
         let mut queue: VecDeque<(Board, u8)> = VecDeque::from_iter(
-            start_board
+            board
                 .get_legal_moves(&move_gen_masks, &hasher)
                 .into_iter()
-                .map(|(_, new_board)| (new_board, 1)),
+                .map(|the_move| {
+                    let mut new_board = board.clone();
+                    new_board.make_move(&the_move, &hasher);
+                    (new_board, 1)
+                }),
         );
         let max_depth = 5;
 
-        while let Some((board, depth)) = queue.pop_front() {
+        while let Some((mut board, depth)) = queue.pop_front() {
+            if board.zobrist != hasher.hash_everyting(&board) {
+                println!("{}", board);
+            }
             assert_eq!(board.zobrist, hasher.hash_everyting(&board));
 
             if depth == max_depth {
                 continue;
             }
 
-            for (_, new_board) in board.get_legal_moves(&move_gen_masks, &hasher) {
+            for new_move in board.get_legal_moves(&move_gen_masks, &hasher) {
+                let mut new_board = board.clone();
+                new_board.make_move(&new_move, &hasher);
+
                 queue.push_back((new_board, depth + 1));
             }
+        }
+    }
+
+    #[test]
+    fn test_zobrist_make_unmake() {
+        let mut board = Board::new(&HASHER);
+        let move_gen_masks = MoveGenMasks::load();
+
+        for legal_move in board.get_legal_moves(&move_gen_masks, &HASHER) {
+            let umh = board.make_move(&legal_move, &HASHER);
+            assert_eq!(board.zobrist, HASHER.hash_everyting(&board));
+            for second_legal_move in board.get_legal_moves(&move_gen_masks, &HASHER) {
+                let umh2 = board.make_move(&second_legal_move, &HASHER);
+                assert_eq!(board.zobrist, HASHER.hash_everyting(&board));
+                board.unmake_move(umh2);
+            }
+            board.unmake_move(umh);
+            assert_eq!(board.zobrist, HASHER.hash_everyting(&board));
         }
     }
 }

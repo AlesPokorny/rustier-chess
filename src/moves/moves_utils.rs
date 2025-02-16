@@ -1,4 +1,7 @@
-use crate::types::{piece::Pieces, square::Square};
+use crate::{
+    types::{bitboard::BitBoard, piece::Pieces, square::Square, state::Castling},
+    utils::zobrist::ZobristHash,
+};
 use std::{
     fmt::{self, Display},
     hash::{Hash, Hasher},
@@ -11,6 +14,19 @@ use std::{
 /// bit 12..13   promotion piece (0 queen, 1 rook, 2 bishop, 3 knight)
 /// bit 14..15   1 - promotion flag, 2 en passant, 3 castling
 pub struct Move(pub u16);
+
+pub struct UnmakeMoveHelper {
+    pub origin: Square,
+    pub destination: Square,
+    pub move_bb: BitBoard,
+    pub piece: usize,
+    pub capture: Option<usize>,
+    pub prev_en_passant: Option<Square>,
+    pub prev_hash: ZobristHash,
+    pub prev_halfmove: u8,
+    pub prev_castling: Castling,
+    pub special_move: u8,
+}
 
 impl Move {
     pub fn new() -> Self {

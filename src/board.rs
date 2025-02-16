@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use crate::moves::move_mask_gen::MoveGenMasks;
 use crate::moves::moves_calculation::{get_all_moves, is_square_in_check};
-use crate::moves::moves_utils::Move;
+use crate::moves::moves_utils::{Move, UnmakeMoveHelper};
 use crate::types::state::{
     BLACK_LONG_ROOK_STARTING_MASK, BLACK_SHORT_ROOK_STARTING_MASK, WHITE_LONG_ROOK_STARTING_MASK,
     WHITE_SHORT_ROOK_STARTING_MASK,
@@ -58,13 +58,13 @@ impl Board {
     }
 
     pub fn get_capture_moves(
-        &self,
+        &mut self,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
-    ) -> Vec<(Move, Board)> {
+    ) -> Vec<Move> {
         self.get_legal_moves(move_gen_masks, hasher)
             .into_iter()
-            .filter(|(legal_move, _)| {
+            .filter(|legal_move| {
                 self.colors[self.state.turn].read_square(&legal_move.get_destination())
             })
             .collect()
@@ -76,22 +76,28 @@ impl Board {
     }
 
     pub fn get_legal_moves(
-        &self,
+        &mut self,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
-    ) -> Vec<(Move, Board)> {
-        let all_moves: Vec<(Move, Board)> = get_all_moves(self, move_gen_masks)
+    ) -> Vec<Move> {
+        let all_moves: Vec<Move> = get_all_moves(self, move_gen_masks)
             .into_iter()
             .filter_map(|the_move| {
-                let mut new_board = self.try_move(&the_move, hasher);
+                let unmake_move_helper = self.make_move(&the_move, hasher);
+
+                // this turn changing is dumb. Can I make it better?
+                self.state.change_turn();
                 if !is_square_in_check(
-                    &new_board.pieces[new_board.state.turn][Pieces::KING].get_one(),
-                    &new_board,
+                    &self.pieces[self.state.turn][Pieces::KING].get_one(),
+                    self,
                     move_gen_masks,
                 ) {
-                    new_board.state.change_turn();
-                    return Some((the_move, new_board));
+                    self.state.change_turn();
+                    self.unmake_move(unmake_move_helper);
+                    return Some(the_move);
                 }
+                self.state.change_turn();
+                self.unmake_move(unmake_move_helper);
                 None
             })
             .collect();
@@ -99,90 +105,86 @@ impl Board {
         all_moves
     }
 
-    pub fn try_move(&self, the_move: &Move, hasher: &ZobristHasher) -> Board {
+    pub fn make_move(&mut self, the_move: &Move, hasher: &ZobristHasher) -> UnmakeMoveHelper {
         let origin = the_move.get_origin();
         let destination = the_move.get_destination();
+        let mut capture: Option<usize> = None;
+        let prev_en_passant = self.state.en_passant;
+        let prev_halfmove = self.state.half_moves;
+        let prev_hash = self.zobrist;
+        let prev_castling: Castling = self.state.castling;
+
         let move_bb =
             BitBoard::zeros_with_one_bit(&origin) ^ BitBoard::zeros_with_one_bit(&destination);
-        let mut move_hash = ZobristHash::new(0_u64);
 
         let is_capture = self.colors[self.state.opponent].read_square(&destination);
 
-        let mut new_board = *self;
-
-        new_board.state.increment_half_move();
+        self.state.increment_half_move();
 
         let mut moving_piece_type = 10;
 
-        new_board.colors[new_board.state.turn] ^= move_bb;
-        for (piece_type, piece_bitboard) in new_board.pieces[new_board.state.turn]
-            .iter_mut()
-            .enumerate()
-        {
+        if self.state.en_passant.is_some() {
+            self.zobrist ^= hasher.hash_en_passant(self, self.state.turn);
+        }
+
+        self.colors[self.state.turn] ^= move_bb;
+        for (piece_type, piece_bitboard) in self.pieces[self.state.turn].iter_mut().enumerate() {
             if piece_bitboard.read_square(&origin) {
-                move_hash ^=
-                    hasher.hash_piece_at_square(&piece_type, &new_board.state.turn, &origin);
-                move_hash ^=
-                    hasher.hash_piece_at_square(&piece_type, &new_board.state.turn, &destination);
+                self.zobrist ^= hasher.hash_piece_at_square(&piece_type, &self.state.turn, &origin);
+                self.zobrist ^=
+                    hasher.hash_piece_at_square(&piece_type, &self.state.turn, &destination);
                 moving_piece_type = piece_type;
                 *piece_bitboard ^= move_bb;
                 if piece_type == Pieces::PAWN {
-                    new_board.state.reset_half_move();
+                    self.state.reset_half_move();
                 }
                 break;
             }
         }
 
         if is_capture {
-            new_board.colors[new_board.state.opponent].set_zero(&destination);
-            for (piece_type, piece_bitboard) in new_board.pieces[new_board.state.opponent]
-                .iter_mut()
-                .enumerate()
+            self.colors[self.state.opponent].set_zero(&destination);
+            for (piece_type, piece_bitboard) in
+                self.pieces[self.state.opponent].iter_mut().enumerate()
             {
                 if piece_bitboard.read_square(&destination) {
+                    capture = Some(piece_type);
                     *piece_bitboard &= !move_bb;
-                    move_hash ^= hasher.hash_piece_at_square(
+                    self.zobrist ^= hasher.hash_piece_at_square(
                         &piece_type,
-                        &new_board.state.opponent,
+                        &self.state.opponent,
                         &destination,
                     );
                     break;
                 }
             }
-            new_board.state.reset_half_move();
-        } else if let Some(en_passant_square) = new_board.state.en_passant {
+            self.state.reset_half_move();
+        } else if let Some(en_passant_square) = self.state.en_passant {
             // is en_passant capture
             if destination == en_passant_square && moving_piece_type == Pieces::PAWN {
                 let capture_square = Square::new(origin.get_rank() * 8 + destination.get_file());
-                new_board.clear_piece(&capture_square, Pieces::PAWN, new_board.state.opponent);
-                move_hash ^= hasher.hash_piece_at_square(
+                self.clear_piece(&capture_square, Pieces::PAWN, self.state.opponent);
+                self.zobrist ^= hasher.hash_piece_at_square(
                     &Pieces::PAWN,
-                    &new_board.state.opponent,
+                    &self.state.opponent,
                     &capture_square,
                 );
             }
         }
 
-        if self.state.en_passant.is_some() {
-            move_hash ^= hasher.hash_en_passant(self, self.state.turn);
-        }
-
-        new_board.state.en_passant = None;
+        self.state.en_passant = None;
 
         match the_move.special_move() {
             0 => (),
             1 => {
                 // 1 promotion
-                new_board.pieces[new_board.state.turn][Pieces::PAWN] &= !move_bb;
-                move_hash ^=
-                    hasher.hash_piece_at_square(&Pieces::PAWN, &new_board.state.turn, &destination);
+                self.pieces[self.state.turn][Pieces::PAWN] &= !move_bb;
+                self.zobrist ^=
+                    hasher.hash_piece_at_square(&Pieces::PAWN, &self.state.turn, &destination);
                 let promotion_piece = the_move.get_promotion_piece();
-                new_board.pieces[new_board.state.turn][promotion_piece].set_one(&destination);
-                move_hash ^= hasher.hash_piece_at_square(
-                    &promotion_piece,
-                    &new_board.state.turn,
-                    &destination,
-                );
+                self.pieces[self.state.turn][promotion_piece].set_one(&destination);
+                self.zobrist ^=
+                    hasher.hash_piece_at_square(&promotion_piece, &self.state.turn, &destination);
             }
             2 => {
                 // 2 en passant
@@ -192,8 +194,8 @@ impl Board {
                     origin.get_rank().sub(1)
                 };
                 let en_passant_square = Square::new(en_passant_rank * 8 + destination.get_file());
-                new_board.state.en_passant = Some(en_passant_square);
-                move_hash ^= hasher.hash_en_passant(&new_board, new_board.state.opponent);
+                self.state.en_passant = Some(en_passant_square);
+                self.zobrist ^= hasher.hash_en_passant(self, self.state.opponent);
             }
             3 => {
                 // 3 castling
@@ -211,86 +213,149 @@ impl Board {
                 let rank = origin.get_rank() * 8;
                 let rook_origin = Square::new(rank + rook_origin_file);
                 let rook_destination = Square::new(rank + rook_destination_file);
-                new_board.move_piece(
+                self.move_piece(
                     &rook_origin,
                     &rook_destination,
                     Pieces::ROOK,
-                    new_board.state.turn,
+                    self.state.turn,
                 );
-                move_hash ^=
-                    hasher.hash_piece_at_square(&Pieces::ROOK, &new_board.state.turn, &rook_origin);
-                move_hash ^= hasher.hash_piece_at_square(
-                    &Pieces::ROOK,
-                    &new_board.state.turn,
-                    &rook_destination,
-                );
+                self.zobrist ^=
+                    hasher.hash_piece_at_square(&Pieces::ROOK, &self.state.turn, &rook_origin);
+                self.zobrist ^=
+                    hasher.hash_piece_at_square(&Pieces::ROOK, &self.state.turn, &rook_destination);
+                self.state.castling.remove_color_castling(self.state.turn);
             }
             _ => panic!("Boom, invalid special move"),
         }
 
-        if new_board.state.castling.can_someone_castle() {
-            if new_board.state.castling.white_long()
-                && (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_LONG_ROOK_STARTING_MASK)
+        if self.state.castling.can_someone_castle() {
+            if self.state.castling.white_long()
+                && (self.pieces[Color::WHITE][Pieces::ROOK] & WHITE_LONG_ROOK_STARTING_MASK)
                     .is_empty()
             {
-                new_board.state.castling.remove_white_long();
-                move_hash ^= hasher.hash_castling_white_long();
+                self.state.castling.remove_white_long();
+                self.zobrist ^= hasher.hash_castling_white_long();
             }
-            if new_board.state.castling.white_short()
-                && (new_board.pieces[Color::WHITE][Pieces::ROOK] & WHITE_SHORT_ROOK_STARTING_MASK)
+            if self.state.castling.white_short()
+                && (self.pieces[Color::WHITE][Pieces::ROOK] & WHITE_SHORT_ROOK_STARTING_MASK)
                     .is_empty()
             {
-                new_board.state.castling.remove_white_short();
-                move_hash ^= hasher.hash_castling_white_short();
+                self.state.castling.remove_white_short();
+                self.zobrist ^= hasher.hash_castling_white_short();
             }
-            if new_board.state.castling.black_long()
-                && (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_LONG_ROOK_STARTING_MASK)
+            if self.state.castling.black_long()
+                && (self.pieces[Color::BLACK][Pieces::ROOK] & BLACK_LONG_ROOK_STARTING_MASK)
                     .is_empty()
             {
-                new_board.state.castling.remove_black_long();
-                move_hash ^= hasher.hash_castling_black_long();
+                self.state.castling.remove_black_long();
+                self.zobrist ^= hasher.hash_castling_black_long();
             }
-            if new_board.state.castling.black_short()
-                && (new_board.pieces[Color::BLACK][Pieces::ROOK] & BLACK_SHORT_ROOK_STARTING_MASK)
+            if self.state.castling.black_short()
+                && (self.pieces[Color::BLACK][Pieces::ROOK] & BLACK_SHORT_ROOK_STARTING_MASK)
                     .is_empty()
             {
-                new_board.state.castling.remove_black_short();
-                move_hash ^= hasher.hash_castling_black_short();
+                self.state.castling.remove_black_short();
+                self.zobrist ^= hasher.hash_castling_black_short();
             }
-            if new_board
-                .state
-                .castling
-                .can_color_castle(new_board.state.turn)
+            if self.state.castling.can_color_castle(self.state.turn)
                 && moving_piece_type == Pieces::KING
             {
-                new_board
-                    .state
-                    .castling
-                    .remove_color_castling(new_board.state.turn);
-                move_hash ^= hasher.hash_castling_color(new_board.state.turn);
+                self.state.castling.remove_color_castling(self.state.turn);
+                self.zobrist ^= hasher.hash_castling_color(self.state.turn);
             }
         }
 
-        move_hash ^= hasher.turn_hash();
-        new_board.zobrist ^= move_hash;
-        new_board.sync_all_pieces();
-        new_board.state.increment_full_move();
+        self.zobrist ^= hasher.turn_hash();
+        self.sync_all_pieces();
+        if self.state.turn == Color::BLACK {
+            self.state.increment_full_move();
+        }
+        self.state.change_turn();
 
-        new_board
+        UnmakeMoveHelper {
+            origin,
+            destination,
+            move_bb,
+            piece: moving_piece_type,
+            capture,
+            prev_en_passant,
+            prev_hash,
+            prev_halfmove,
+            prev_castling,
+            special_move: the_move.special_move() as u8,
+        }
+    }
+
+    pub fn unmake_move(&mut self, helper: UnmakeMoveHelper) {
+        self.state.change_turn();
+        self.colors[self.state.turn] ^= helper.move_bb;
+        self.pieces[self.state.turn][helper.piece] ^= helper.move_bb;
+
+        if let Some(captured_piece) = helper.capture {
+            self.colors[self.state.opponent].set_one(&helper.destination);
+            self.pieces[self.state.opponent][captured_piece].set_one(&helper.destination);
+        }
+
+        if let Some(en_passant) = helper.prev_en_passant {
+            if helper.destination == en_passant && helper.piece == Pieces::PAWN {
+                let capture_square =
+                    Square::new(helper.origin.get_rank() * 8 + helper.destination.get_file());
+                self.colors[self.state.opponent].set_one(&capture_square);
+                self.pieces[self.state.opponent][Pieces::PAWN].set_one(&capture_square);
+            }
+        }
+
+        match helper.special_move {
+            // promotion
+            1 => {
+                for piece_bb in self.pieces[self.state.turn].iter_mut() {
+                    piece_bb.set_zero(&helper.destination)
+                }
+            }
+            // castling
+            3 => {
+                let rank = helper.destination.get_rank();
+                let (origin_file, destination_file) = if helper.destination.get_file() == 2 {
+                    // long
+                    (0, 3)
+                } else {
+                    // short
+                    (7, 5)
+                };
+                let rook_origin = Square::new(rank * 8 + origin_file);
+                let rook_destination = Square::new(rank * 8 + destination_file);
+
+                self.move_piece(
+                    &rook_destination,
+                    &rook_origin,
+                    Pieces::ROOK,
+                    self.state.turn,
+                );
+            }
+            _ => (),
+        }
+
+        if self.state.turn == Color::BLACK {
+            self.state.restore_full_move();
+        }
+        self.state.en_passant = helper.prev_en_passant;
+        self.state.castling = helper.prev_castling;
+        self.zobrist = helper.prev_hash;
+        self.state.castling = helper.prev_castling;
+        self.sync_all_pieces();
     }
 
     pub fn check_and_make_move(
-        &self,
+        &mut self,
         the_move: &Move,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
-    ) -> Option<Board> {
-        for (possible_move, board) in self.get_legal_moves(move_gen_masks, hasher) {
+    ) {
+        for possible_move in self.get_legal_moves(move_gen_masks, hasher) {
             if &possible_move == the_move {
-                return Some(board);
+                return;
             }
         }
-        None
     }
 
     pub fn empty() -> Self {
@@ -582,6 +647,26 @@ impl fmt::Display for Board {
 #[cfg(test)]
 mod test_board {
     use super::*;
+
+    // #[test]
+    // fn test_a() {
+    //     let hasher = ZobristHasher::load();
+    //     let move_gen_masks = MoveGenMasks::load();
+    //     let mut board = Board::new(&hasher);
+
+    //     for legal_move in board.get_legal_moves(&move_gen_masks, &hasher) {
+    //         let umh = board.make_move(&legal_move, &hasher);
+    //         for second_move in board.get_legal_moves(&move_gen_masks, &hasher) {
+    //             let umh2 = board.make_move(&second_move, &hasher);
+    //             println!("{}", board);
+    //             board.unmake_move(umh2);
+    //         }
+    //         board.unmake_move(umh);
+
+    //     }
+
+    //     println!("{}", board);
+    // }
 
     #[test]
     fn test_to_fen() {

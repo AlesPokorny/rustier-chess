@@ -8,10 +8,10 @@ use rustier_chess::{
 fn main() {
     let hasher = ZobristHasher::load();
     let move_gen_masks = MoveGenMasks::load();
-    let board = Board::new(&hasher);
+    let mut board = Board::new(&hasher);
 
     let now = Instant::now();
-    let n_iterations = play_game(&board, &move_gen_masks, &hasher, 1, 6) as f64;
+    let n_iterations = play_game(&mut board, &move_gen_masks, &hasher, 1, 6) as f64;
     let secs = now.elapsed().as_secs_f64();
 
     println!("It took {} seconds with {} nodes.", secs, n_iterations);
