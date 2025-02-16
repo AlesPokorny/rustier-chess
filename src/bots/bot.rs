@@ -18,8 +18,9 @@ use crate::game::UCI_STOP;
 
 use super::{pesto::PeSTO, time_control::TimeControl};
 
-const MIN_VALUE: i32 = -100000;
-const MAX_VALUE: i32 = 100000;
+const MIN_VALUE: i32 = -1000000;
+const MAX_VALUE: i32 = 1000000;
+const CHECKMATE_SCORE: i32 = 990000;
 
 pub struct Bot {
     evaluation_cache: HashMap<ZobristHash, i32>,
@@ -72,7 +73,7 @@ impl Bot {
         let n_legal_moves = self.get_number_of_moves(board, move_gen_masks, hasher);
         if n_legal_moves == 0 {
             if board.is_check(move_gen_masks) {
-                return MIN_VALUE;
+                return -CHECKMATE_SCORE;
             } else {
                 return 0;
             }
@@ -196,7 +197,13 @@ impl Bot {
         let mut results: Vec<(Move, Board)> = Vec::with_capacity(self.max_depth as usize);
 
         for depth in 1..=self.max_depth {
-            let best_move = self.get_best_move_for_depth(depth, board, move_gen_masks, hasher);
+            let (best_score, best_move) =
+                self.get_best_move_for_depth(depth, board, move_gen_masks, hasher);
+
+            if best_score == CHECKMATE_SCORE {
+                return best_move;
+            }
+
             if UCI_STOP.load(Ordering::Relaxed) {
                 break;
             }
@@ -213,9 +220,9 @@ impl Bot {
         board: &Board,
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
-    ) -> (Move, Board) {
+    ) -> (i32, (Move, Board)) {
         let mut nodes_checked = 0;
-        let mut best_move: (Move, Board) = (Move::new(), *board);
+        let mut best_move: (i32, (Move, Board)) = (0, (Move::new(), *board));
         let mut alpha = MIN_VALUE;
         let beta = MAX_VALUE;
 
@@ -226,11 +233,16 @@ impl Bot {
                 break;
             }
             let (opponent_score, nodes) =
-                self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, depth);
+                self.alpha_beta(&new_board, move_gen_masks, hasher, -beta, -alpha, depth - 1);
             let score = -opponent_score;
+
+            if score == CHECKMATE_SCORE {
+                return (score, (new_move, new_board));
+            }
+
             if score > alpha {
                 alpha = score;
-                best_move = (new_move, new_board);
+                best_move = (score, (new_move, new_board));
             }
             nodes_checked += nodes;
         }
@@ -289,6 +301,8 @@ mod test_bot_evaluation {
         let hasher = ZobristHasher::load();
         let board = Board::from_fen("8/5k1K/8/6q1/8/8/8/8 b - - 0 1", &hasher).unwrap();
         let mut bot = Bot::default();
+
+        println!("{}", board);
 
         let (best_move, _) = bot.get_best_move(&board, &move_gen_masks, &hasher);
 

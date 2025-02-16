@@ -16,5 +16,5 @@
  - [ ] Opening tables
  - [ ] Syzygy endgame tables
  - [ ] Repetition draw
- - [ ] Checkmate
+ - [X] Checkmate
  - [X] Basic Time control
