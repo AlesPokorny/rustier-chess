@@ -86,8 +86,8 @@ impl UCIGame {
         UCI_STOP.store(false, Ordering::Relaxed);
         let mut wtime = u32::MAX;
         let mut btime = u32::MAX;
-        let mut winc = u32::MAX;
-        let mut binc = u32::MAX;
+        let mut winc = 0;
+        let mut binc = 0;
         let mut move_time: Option<u32> = None;
 
         for i in 0..args.len() {

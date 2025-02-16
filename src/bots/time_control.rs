@@ -38,4 +38,9 @@ impl TimeControl {
             move_time: Some(u32::MAX),
         }
     }
+
+    #[cfg(test)]
+    pub fn set_move_time(&mut self, move_time: u32) {
+        self.move_time = Some(move_time);
+    }
 }
