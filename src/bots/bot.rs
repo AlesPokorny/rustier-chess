@@ -209,8 +209,11 @@ impl Bot {
         let elapsed = start.elapsed().as_micros();
 
         println!("info depth {} seldepth {}", depth, self.max_depth);
-		println!("info score cp {}  depth {} nodes {}", alpha, depth, nodes_checked);
-		println!("info nps {}", (nodes_checked as u128 * 1_000_000)/ elapsed);
+        println!(
+            "info score cp {}  depth {} nodes {}",
+            alpha, depth, nodes_checked
+        );
+        println!("info nps {}", (nodes_checked as u128 * 1_000_000) / elapsed);
         println!("Checked {} nodes", nodes_checked);
         best_move
     }

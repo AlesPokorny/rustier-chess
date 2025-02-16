@@ -37,7 +37,7 @@ impl MoveGenMasks {
     }
 }
 
-const MOVES_FOLDER_PATH: &str = "./src/moves/data/";
+const MOVES_FOLDER_PATH: &str = "./data/moves/";
 const KING_MOVES_FILE: &str = "king.bin";
 const KNIGHT_MOVES_FILE: &str = "knight.bin";
 const ROOK_MOVES_FILE: &str = "rook.bin";

@@ -107,7 +107,6 @@ impl UCIGame {
                 .get_best_move(&self.board, &self.move_gen_masks, &self.hasher);
         self.board = new_board;
         println!("bestmove {}", bot_move.to_long_string());
-        println!("{}", self.board);
     }
 
     fn uci_uci(&self) {
