@@ -399,7 +399,7 @@ impl Board {
         }
 
         let all_pieces = colors[0] | colors[1];
-        let turn = if fen_parts[1].to_ascii_lowercase() == "w" {
+        let turn = if fen_parts[1].eq_ignore_ascii_case("w") {
             Color::WHITE
         } else {
             Color::BLACK

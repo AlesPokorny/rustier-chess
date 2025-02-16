@@ -17,4 +17,4 @@
  - [ ] Syzygy endgame tables
  - [ ] Repetition draw
  - [ ] Checkmate
- - [ ] Time control
+ - [X] Basic Time control

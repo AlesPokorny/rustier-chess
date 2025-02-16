@@ -1,5 +1,6 @@
 use crate::board::Board;
 use crate::bots::bot::Bot;
+use crate::bots::time_control::TimeControl;
 use crate::moves::moves_utils::Move;
 use crate::{moves::move_mask_gen::MoveGenMasks, utils::zobrist::ZobristHasher};
 use std::sync::atomic::AtomicBool;
@@ -83,24 +84,33 @@ impl UCIGame {
 
     fn uci_go(&mut self, args: Vec<&str>) {
         UCI_STOP.store(false, Ordering::Relaxed);
+        let mut wtime = u32::MAX;
+        let mut btime = u32::MAX;
+        let mut winc = u32::MAX;
+        let mut binc = u32::MAX;
+        let mut move_time: Option<u32> = None;
 
         for i in 0..args.len() {
             match args[i] {
                 "infinite" => self.bot.set_depth(u8::MAX),
                 "searchmoves" => (),
                 "ponder" => (),
-                "wtime" => (),
-                "btime" => (),
-                "winc" => (),
-                "binc" => (),
+                "wtime" => wtime = args[i + 1].parse::<u32>().unwrap(),
+                "btime" => btime = args[i + 1].parse::<u32>().unwrap(),
+                "winc" => winc = args[i + 1].parse::<u32>().unwrap(),
+                "binc" => binc = args[i + 1].parse::<u32>().unwrap(),
                 "movestogo" => (),
                 "depth" => self.bot.set_depth(args[i + 1].parse::<u8>().unwrap()),
                 "nodes" => (),
                 "mate" => (),
-                "movetime" => (),
+                "movetime" => move_time = Some(args[i + 1].parse::<u32>().unwrap()),
                 _ => continue,
             }
         }
+
+        let time_control = TimeControl::new(wtime, btime, winc, binc, move_time);
+
+        self.bot.set_time_control(time_control);
 
         let (bot_move, new_board) =
             self.bot

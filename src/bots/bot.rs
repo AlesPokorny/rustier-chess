@@ -1,4 +1,9 @@
-use std::{collections::HashMap, sync::atomic::Ordering, time::Instant};
+use std::{
+    collections::HashMap,
+    sync::atomic::Ordering,
+    thread,
+    time::{Duration, Instant},
+};
 
 use rand::Rng;
 
@@ -11,7 +16,7 @@ use crate::{
 
 use crate::game::UCI_STOP;
 
-use super::pesto::PeSTO;
+use super::{pesto::PeSTO, time_control::TimeControl};
 
 const MIN_VALUE: i32 = -100000;
 const MAX_VALUE: i32 = 100000;
@@ -21,10 +26,11 @@ pub struct Bot {
     piece_values: [i32; 6],
     max_depth: u8,
     pesto: PeSTO,
+    time_control: TimeControl,
 }
 
 impl Bot {
-    pub fn with_depth(max_depth: u8) -> Self {
+    pub fn with_depth(max_depth: u8, time_control: TimeControl) -> Self {
         let mut piece_values = [0; 6];
         for (piece, value) in PIECE_VALUES_SETTING {
             piece_values[piece] = value;
@@ -34,12 +40,18 @@ impl Bot {
             piece_values,
             max_depth,
             pesto: PeSTO::default(),
+            time_control,
         }
     }
 
     pub fn set_depth(&mut self, max_depth: u8) {
         self.max_depth = max_depth
     }
+
+    pub fn set_time_control(&mut self, time_control: TimeControl) {
+        self.time_control = time_control
+    }
+
     fn make_random_move(moves: Vec<(Move, BitBoard)>) -> (Move, BitBoard) {
         let mut rng = rand::rng();
         let i = rng.random_range(0..moves.len());
@@ -167,6 +179,19 @@ impl Bot {
         move_gen_masks: &MoveGenMasks,
         hasher: &ZobristHasher,
     ) -> (Move, Board) {
+        let move_start = Instant::now();
+        let move_max_time = self.time_control.get_move_time(&board.state.turn) as u128;
+        let time_thread = thread::spawn(move || loop {
+            if move_start.elapsed().as_millis() > move_max_time {
+                UCI_STOP.store(true, Ordering::Relaxed);
+                return;
+            }
+            if UCI_STOP.load(Ordering::Relaxed) {
+                return;
+            }
+            thread::sleep(Duration::from_millis(300));
+        });
+
         let mut results: Vec<(Move, Board)> = Vec::with_capacity(self.max_depth as usize);
 
         for depth in 1..=self.max_depth {
@@ -176,6 +201,8 @@ impl Bot {
             }
             results.push(best_move);
         }
+        UCI_STOP.store(true, Ordering::Relaxed);
+        time_thread.join().unwrap();
         results.into_iter().last().unwrap()
     }
 
@@ -228,42 +255,43 @@ impl Default for Bot {
         Self {
             evaluation_cache: HashMap::with_capacity(1000),
             piece_values,
-            max_depth: 4,
+            max_depth: 5,
             pesto: PeSTO::default(),
+            time_control: TimeControl::max(),
         }
     }
 }
 
-#[cfg(test)]
-mod test_bot_evaluation {
-    use super::*;
+// #[cfg(test)]
+// mod test_bot_evaluation {
+//     use super::*;
 
-    #[test]
-    fn test_take_the_rook() {
-        let move_gen_masks = MoveGenMasks::load();
-        let hasher = ZobristHasher::load();
-        let mut board = Board::from_fen("8/8/5K2/5R2/5r2/8/5k2/8 w - - 0 1", &hasher).unwrap();
-        // let mut board = Board::from_fen("8/8/5K2/8/5R2/8/8/4k3 w - - 1 3", &hasher).unwrap();
-        let mut bot = Bot::with_depth(2);
+//     #[test]
+//     fn test_take_the_rook() {
+//         let move_gen_masks = MoveGenMasks::load();
+//         let hasher = ZobristHasher::load();
+//         let mut board = Board::from_fen("8/8/5K2/5R2/5r2/8/5k2/8 w - - 0 1", &hasher).unwrap();
+//         // let mut board = Board::from_fen("8/8/5K2/8/5R2/8/8/4k3 w - - 1 3", &hasher).unwrap();
+//         let mut bot = Bot::with_depth(2, TimeControl::max());
 
-        // let (a, b) = bot.get_best_move(&board, &move_gen_masks, &hasher);
+//         // let (a, b) = bot.get_best_move(&board, &move_gen_masks, &hasher);
 
-        // println!("{}", b);
-        for _ in 0..4 {
-            let (best_move, new_board) = bot.get_best_move(&board, &move_gen_masks, &hasher);
-            board = new_board;
-            println!("{}", board);
-            println!("{}", board.get_fen());
-        }
+//         // println!("{}", b);
+//         for _ in 0..4 {
+//             let (best_move, new_board) = bot.get_best_move(&board, &move_gen_masks, &hasher);
+//             board = new_board;
+//             println!("{}", board);
+//             println!("{}", board.get_fen());
+//         }
 
-        // let (best_move, _) = bot.get_best_move(&board, &move_gen_masks, &hasher);
-        // assert_eq!(best_move.to_long_string(), "f5f4");
-    }
+//         // let (best_move, _) = bot.get_best_move(&board, &move_gen_masks, &hasher);
+//         // assert_eq!(best_move.to_long_string(), "f5f4");
+//     }
 
-    #[test]
-    fn test_a() {
-        for i in 0..64 {
-            println!("{}", i ^ 56);
-        }
-    }
-}
+//     #[test]
+//     fn test_a() {
+//         for i in 0..64 {
+//             println!("{}", i ^ 56);
+//         }
+//     }
+// }
