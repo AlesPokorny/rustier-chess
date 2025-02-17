@@ -1,4 +1,3 @@
-use core::hash;
 use std::error::Error;
 use std::fmt;
 use std::ops::{Add, Sub};

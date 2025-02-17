@@ -158,3 +158,9 @@ impl UCIGame {
         println!("readyok");
     }
 }
+
+impl Default for UCIGame {
+    fn default() -> Self {
+        Self::new()
+    }
+}
