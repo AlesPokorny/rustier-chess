@@ -147,7 +147,7 @@ impl UCIGame {
 
         if !args.is_empty() && args.remove(0) == "moves" {
             for move_str in args {
-                let move_to_make = Move::from_long_str(move_str);
+                let move_to_make = Move::from_long_str(move_str, &self.board);
                 self.board
                     .check_and_make_move(&move_to_make, &self.move_gen_masks, &self.hasher)
             }

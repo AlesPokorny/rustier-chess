@@ -127,6 +127,8 @@ impl Board {
         let prev_halfmove = self.state.half_moves;
         let prev_hash = self.zobrist;
         let prev_castling: Castling = self.state.castling;
+        let mut was_promotion = false;
+        let mut was_castling = false;
 
         let move_bb =
             BitBoard::zeros_with_one_bit(&origin) ^ BitBoard::zeros_with_one_bit(&destination);
@@ -188,20 +190,18 @@ impl Board {
 
         self.state.en_passant = None;
 
-        match the_move.special_move() {
-            0 => (),
-            1 => {
-                // 1 promotion
-                self.pieces[self.state.turn][Pieces::PAWN] &= !move_bb;
-                self.zobrist ^=
-                    hasher.hash_piece_at_square(&Pieces::PAWN, &self.state.turn, &destination);
-                let promotion_piece = the_move.get_promotion_piece();
-                self.pieces[self.state.turn][promotion_piece].set_one(&destination);
-                self.zobrist ^=
-                    hasher.hash_piece_at_square(&promotion_piece, &self.state.turn, &destination);
-            }
-            2 => {
-                // 2 en passant
+        if let Some(promotion_piece) = the_move.get_promotion_piece() {
+            was_promotion = true;
+            self.pieces[self.state.turn][promotion_piece].set_one(&destination);
+            self.zobrist ^=
+                hasher.hash_piece_at_square(&Pieces::PAWN, &self.state.turn, &destination);
+            self.zobrist ^=
+                hasher.hash_piece_at_square(&promotion_piece, &self.state.turn, &destination);
+        }
+
+        if let Some(special_move_bool) = the_move.get_special_move() {
+            if special_move_bool {
+                // en_passant
                 let en_passant_rank = if self.state.turn == Color::WHITE {
                     origin.get_rank().add(1)
                 } else {
@@ -210,9 +210,9 @@ impl Board {
                 let en_passant_square = Square::new(en_passant_rank * 8 + destination.get_file());
                 self.state.en_passant = Some(en_passant_square);
                 self.zobrist ^= hasher.hash_en_passant(self, self.state.opponent);
-            }
-            3 => {
-                // 3 castling
+            } else {
+                // castling
+                was_castling = true;
                 let rook_origin_file: u8;
                 let rook_destination_file: u8;
                 if destination.get_file() == 2 {
@@ -240,7 +240,6 @@ impl Board {
                 self.state.castling.remove_color_castling(self.state.turn);
                 self.state.reset_half_move();
             }
-            _ => panic!("Boom, invalid special move"),
         }
 
         if self.state.castling.can_someone_castle() {
@@ -298,7 +297,8 @@ impl Board {
             prev_hash,
             prev_halfmove,
             prev_castling,
-            special_move: the_move.special_move() as u8,
+            was_promotion,
+            was_castling,
         }
     }
 
@@ -321,34 +321,28 @@ impl Board {
             }
         }
 
-        match helper.special_move {
-            // promotion
-            1 => {
-                for piece_bb in self.pieces[self.state.turn].iter_mut() {
-                    piece_bb.set_zero(&helper.destination)
-                }
+        if helper.was_promotion {
+            for piece_bb in self.pieces[self.state.turn].iter_mut() {
+                piece_bb.set_zero(&helper.destination)
             }
-            // castling
-            3 => {
-                let rank = helper.destination.get_rank();
-                let (origin_file, destination_file) = if helper.destination.get_file() == 2 {
-                    // long
-                    (0, 3)
-                } else {
-                    // short
-                    (7, 5)
-                };
-                let rook_origin = Square::new(rank * 8 + origin_file);
-                let rook_destination = Square::new(rank * 8 + destination_file);
+        } else if helper.was_castling {
+            let rank = helper.destination.get_rank();
+            let (origin_file, destination_file) = if helper.destination.get_file() == 2 {
+                // long
+                (0, 3)
+            } else {
+                // short
+                (7, 5)
+            };
+            let rook_origin = Square::new(rank * 8 + origin_file);
+            let rook_destination = Square::new(rank * 8 + destination_file);
 
-                self.move_piece(
-                    &rook_destination,
-                    &rook_origin,
-                    Pieces::ROOK,
-                    self.state.turn,
-                );
-            }
-            _ => (),
+            self.move_piece(
+                &rook_destination,
+                &rook_origin,
+                Pieces::ROOK,
+                self.state.turn,
+            );
         }
 
         if self.state.turn == Color::BLACK {

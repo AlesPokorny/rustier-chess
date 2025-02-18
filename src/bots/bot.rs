@@ -230,12 +230,12 @@ impl Bot {
         hasher: &ZobristHasher,
     ) -> (i32, Move) {
         let mut nodes_checked = 0;
-        let mut best_move: (i32, Move) = (0, Move::new());
         let mut alpha = MIN_VALUE;
         let beta = MAX_VALUE;
-
+        
         let start = Instant::now();
-
+        let legal_moves = board.get_legal_moves(move_gen_masks, hasher);
+        let mut best_move = (0, legal_moves[0].clone());
         for new_move in board.get_legal_moves(move_gen_masks, hasher) {
             if UCI_STOP.load(Ordering::Relaxed) {
                 break;

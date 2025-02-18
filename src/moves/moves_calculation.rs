@@ -24,7 +24,7 @@ pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
     let new_square = square + direction * 8;
 
     if !(board.colors[0] | board.colors[1]).read_square(&new_square) {
-        let new_move = Move::from_origin_and_destination(&new_square, &square);
+        let new_move = Move::from_origin_and_destination(&new_square, &square, Pieces::PAWN);
         if !(1..=6).contains(&new_square.get_rank()) {
             for piece in PROMOTION_PIECES {
                 let mut promotion_move = new_move.clone();
@@ -43,7 +43,7 @@ pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
             if square.get_rank() == base_rank {
                 let new_square = square + direction * 16;
                 if !(board.colors[0] | board.colors[1]).read_square(&new_square) {
-                    let mut new_move = Move::from_origin_and_destination(&new_square, &square);
+                    let mut new_move = Move::from_origin_and_destination(&new_square, &square, Pieces::PAWN);
                     new_move.set_en_passant();
                     moves.push(new_move);
                 }
@@ -61,7 +61,7 @@ pub fn get_pawn_moves(square: Square, board: &Board) -> Vec<Move> {
         if board.colors[board.state.opponent].read_square(&attacking_square)
             | board.check_en_passant(&attacking_square)
         {
-            let new_move = Move::from_origin_and_destination(&attacking_square, &square);
+            let new_move = Move::from_origin_and_destination(&attacking_square, &square, Pieces::PAWN);
             if !(1..=6).contains(&new_rank) {
                 for piece in PROMOTION_PIECES {
                     let mut promotion_move = new_move.clone();
@@ -85,7 +85,7 @@ pub fn get_knight_moves(
     (move_gen_masks.knight_moves[square.as_usize()] & !board.colors[board.state.turn])
         .get_ones()
         .into_iter()
-        .map(|new_square| Move::from_origin_and_destination(&new_square, square))
+        .map(|new_square| Move::from_origin_and_destination(&new_square, square, Pieces::KNIGHT))
         .collect()
 }
 
@@ -94,7 +94,7 @@ fn get_king_moves(square: &Square, move_gen_masks: &MoveGenMasks, board: &Board)
         & !board.colors[board.state.turn])
         .get_ones()
         .into_iter()
-        .map(|new_square| Move::from_origin_and_destination(&new_square, square))
+        .map(|new_square| Move::from_origin_and_destination(&new_square, square, Pieces::KNIGHT))
         .collect();
     moves.append(&mut get_castling_moves(square, board, move_gen_masks));
 
@@ -126,7 +126,7 @@ fn get_slidy_boii_moves(
     let mut all_moves: Vec<Move> = Vec::with_capacity(all_desitnations.len());
 
     for new_square in all_desitnations {
-        all_moves.push(Move::from_origin_and_destination(&new_square, square))
+        all_moves.push(Move::from_origin_and_destination(&new_square, square, piece))
     }
     all_moves
 }
@@ -158,7 +158,7 @@ fn get_castling_moves(square: &Square, board: &Board, move_gen_masks: &MoveGenMa
             } else {
                 (Square::new(60), Square::new(62))
             };
-            let mut castling_move = Move::from_origin_and_destination(&destination, &origin);
+            let mut castling_move = Move::from_origin_and_destination(&destination, &origin, Pieces::KING);
             castling_move.set_castling();
             castling_moves.push(castling_move);
         }
@@ -182,7 +182,7 @@ fn get_castling_moves(square: &Square, board: &Board, move_gen_masks: &MoveGenMa
             } else {
                 (Square::new(60), Square::new(58))
             };
-            let mut castling_move = Move::from_origin_and_destination(&destination, &origin);
+            let mut castling_move = Move::from_origin_and_destination(&destination, &origin, Pieces::KING);
             castling_move.set_castling();
             castling_moves.push(castling_move);
         }
@@ -286,9 +286,9 @@ mod test_move_calculation {
 
         assert_eq!(
             moves[0],
-            Move::from_origin_and_destination(&Square::new(16), &square)
+            Move::from_origin_and_destination(&Square::new(16), &square, Pieces::PAWN)
         );
-        let mut new_move = Move::from_origin_and_destination(&Square::new(24), &square);
+        let mut new_move = Move::from_origin_and_destination(&Square::new(24), &square, Pieces::PAWN);
         new_move.set_en_passant();
         assert_eq!(moves[1], new_move);
     }
@@ -303,10 +303,10 @@ mod test_move_calculation {
 
         assert_eq!(
             moves[0],
-            Move::from_origin_and_destination(&Square::from_str("b6").unwrap(), &square)
+            Move::from_origin_and_destination(&Square::from_str("b6").unwrap(), &square, Pieces::PAWN)
         );
         let mut new_move =
-            Move::from_origin_and_destination(&Square::from_str("b5").unwrap(), &square);
+            Move::from_origin_and_destination(&Square::from_str("b5").unwrap(), &square, Pieces::PAWN);
         new_move.set_en_passant();
         assert_eq!(moves[1], new_move);
     }
@@ -350,12 +350,12 @@ mod test_move_calculation {
         let short = moves.first().unwrap();
         assert_eq!(short.get_destination().to_string(), "g8");
         assert_eq!(short.get_origin().to_string(), "e8");
-        assert!(short.special_move() == 3);
+        assert!(!short.get_special_move().unwrap());
 
         let long = moves.get(1).unwrap();
         assert_eq!(long.get_destination().to_string(), "c8");
         assert_eq!(long.get_origin().to_string(), "e8");
-        assert!(short.special_move() == 3);
+        assert!(!short.get_special_move().unwrap());
     }
 
     #[test]
@@ -373,12 +373,12 @@ mod test_move_calculation {
         let short = moves.first().unwrap();
         assert_eq!(short.get_destination().to_string(), "g1");
         assert_eq!(short.get_origin().to_string(), "e1");
-        assert!(short.special_move() == 3);
+        assert!(short.get_special_move().unwrap());
 
         let long = moves.get(1).unwrap();
         assert_eq!(long.get_destination().to_string(), "c1");
         assert_eq!(long.get_origin().to_string(), "e1");
-        assert!(short.special_move() == 3);
+        assert!(short.get_special_move().unwrap());
     }
 
     #[test]

@@ -1,19 +1,11 @@
 use crate::{
-    types::{bitboard::BitBoard, piece::Pieces, square::Square, state::Castling},
-    utils::zobrist::ZobristHash,
+    board::Board, types::{bitboard::BitBoard, piece::Pieces, square::Square, state::Castling}, utils::zobrist::ZobristHash
 };
 use std::{
     fmt::{self, Display},
     hash::{Hash, Hasher},
     str::FromStr,
 };
-
-#[derive(Clone)]
-/// bit 0..5     destination
-/// bit 6..11    origin
-/// bit 12..13   promotion piece (0 queen, 1 rook, 2 bishop, 3 knight)
-/// bit 14..15   1 - promotion flag, 2 en passant, 3 castling
-pub struct Move(pub u16);
 
 pub struct UnmakeMoveHelper {
     pub origin: Square,
@@ -25,73 +17,76 @@ pub struct UnmakeMoveHelper {
     pub prev_hash: ZobristHash,
     pub prev_halfmove: u8,
     pub prev_castling: Castling,
-    pub special_move: u8,
+    pub was_promotion: bool,
+    pub was_castling: bool,
+}
+#[derive(Clone)]
+/// bit 0..5     destination
+/// bit 6..11    origin
+/// bit 12..13   promotion piece (0 queen, 1 rook, 2 bishop, 3 knight)
+/// bit 14..15   1 - promotion flag, 2 en passant, 3 castling
+// pub struct Move(pub u16);
+
+pub struct Move {
+    origin: Square,
+    destination: Square,
+    moving_piece: usize,
+    promotion_piece: Option<usize>,
+    special_move: Option<bool>,  // true = en_passant, false = castling
+    capture: Option<usize>
 }
 
 impl Move {
-    pub fn new() -> Self {
-        Self(0)
-    }
-
-    pub fn from_destination(square: &Square) -> Self {
-        Self(square.as_u16())
-    }
-
-    pub fn from_origin(origin: &Square) -> Self {
-        Self(origin.as_u16() << 6)
-    }
-
-    pub fn from_origin_and_destination(destination: &Square, origin: &Square) -> Self {
-        Self(destination.as_u16() | (origin.as_u16() << 6))
-    }
-
-    pub fn set_destination(&mut self, square: &Square) {
-        self.0 |= square.as_u16()
-    }
-
-    pub fn set_origin(&mut self, square: &Square) {
-        self.0 |= square.as_u16() << 6
+    pub fn from_origin_and_destination(destination: &Square, origin: &Square, moving_piece: usize) -> Self {
+        Self {
+            origin: *origin,
+            destination: *destination,
+            moving_piece,
+            promotion_piece: None,
+            special_move: None,
+            capture: None,
+        }
     }
 
     pub fn set_castling(&mut self) {
-        self.0 |= 0xc000 // 3 << 14
+        self.special_move = Some(false)
     }
 
     pub fn set_promotion(&mut self, piece_type: usize) {
-        let piece_value: u16 = match piece_type {
-            (0..=3) => piece_type as u16,
-            _ => panic!("Cannot promote to king nor pawn"),
-        };
-        self.0 |= piece_value << 12;
-        self.0 |= 0x4000; // 1 << 14
+        self.promotion_piece = Some(piece_type);
     }
 
     pub fn set_en_passant(&mut self) {
-        self.0 |= 0x8000; // 1 << 15
+        self.special_move = Some(true)
     }
 
     pub fn get_destination(&self) -> Square {
-        Square::new((self.0 & 0x3f) as u8) // 0b111111
+        self.destination
     }
 
     pub fn get_origin(&self) -> Square {
-        Square::new(((self.0 & 0xfc0) >> 6) as u8) // 0b111111000000
+        self.origin
     }
 
-    ///1 - promotion flag, 2 en passant, 3 castling
-    pub fn special_move(&self) -> u16 {
-        self.0 >> 14
+    pub fn get_promotion_piece(&self) -> Option<usize> {
+        self.promotion_piece
     }
 
-    pub fn get_promotion_piece(&self) -> usize {
-        ((self.0 & 0x3000) >> 12) as usize
+    /// None -> no special move
+    /// true -> en_passant
+    /// false -> castling
+    pub fn get_special_move(&self) -> Option<bool> {
+        self.special_move
     }
-    pub fn from_long_str(input: &str) -> Self {
+
+    pub fn from_long_str(input: &str, board: &Board) -> Self {
         let origin = Square::from_str(&input[0..=1]).unwrap();
         let destination = Square::from_str(&input[2..=3]).unwrap();
 
-        let mut output = Move::from_origin_and_destination(&destination, &origin);
-
+        let piece= board.get_piece_on_square(&origin).unwrap().piece;
+        
+        let mut output = Move::from_origin_and_destination(&destination, &origin, piece);
+        
         if let Some(promotion_piece) = input.chars().nth(4) {
             output.set_promotion(match promotion_piece {
                 'q' => Pieces::QUEEN,
@@ -112,35 +107,29 @@ impl Move {
         output.push_str(&origin.to_string());
         output.push_str(&destination.to_string());
 
-        if self.special_move() != 1 {
-            return output;
+        if let Some(promotion_piece) = self.promotion_piece {
+            let promotion_piece_string = match promotion_piece {
+                Pieces::QUEEN => "q",
+                Pieces::KNIGHT => "n",
+                Pieces::ROOK => "r",
+                Pieces::BISHOP => "b",
+                _ => panic!("Unexpected promotion piece {}", promotion_piece),
+            };
+            output.push_str(promotion_piece_string);
         }
 
-        let promotion_piece = match self.get_promotion_piece() {
-            Pieces::QUEEN => "q",
-            Pieces::KNIGHT => "n",
-            Pieces::ROOK => "r",
-            Pieces::BISHOP => "b",
-            _ => panic!("Unexpected promotion piece {}", self.get_promotion_piece()),
-        };
-        output.push_str(promotion_piece);
         output
     }
 }
 
 impl PartialEq for Move {
     fn eq(&self, other: &Self) -> bool {
-        (self.0 & 0x3FFF) == (other.0 & 0x3FFF)
+        self.origin == other.origin && self.destination == other.destination && self.promotion_piece == other.promotion_piece
+        // (self.0 & 0x3FFF) == (other.0 & 0x3FFF)
     }
 }
 
 impl Eq for Move {}
-
-impl Default for Move {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 impl fmt::Debug for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -152,44 +141,26 @@ impl fmt::Debug for Move {
 
 impl Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let promotion_str = if self.special_move() == 1 {
-            match self.get_promotion_piece() {
-                Pieces::QUEEN => "q",
-                Pieces::KNIGHT => "n",
-                Pieces::ROOK => "r",
-                Pieces::BISHOP => "b",
-                _ => panic!("wrong promotion piece"),
-            }
-        } else {
-            ""
-        };
-
-        write!(
-            f,
-            "{}{}{}",
-            self.get_origin(),
-            self.get_destination(),
-            promotion_str,
-        )
+        write!(f, "{}", self.to_long_string())
     }
 }
 
-impl Hash for Move {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_u16(self.0);
-    }
-}
+// impl Hash for Move {
+//     fn hash<H: Hasher>(&self, state: &mut H) {
+//         state.write_u16(self.0);
+//     }
+// }
 
-impl Hasher for Move {
-    fn finish(&self) -> u64 {
-        self.0 as u64
-    }
+// impl Hasher for Move {
+//     fn finish(&self) -> u64 {
+//         self.0 as u64
+//     }
 
-    fn write(&mut self, _bytes: &[u8]) {
-        panic!("This hasher only takes u16");
-    }
+//     fn write(&mut self, _bytes: &[u8]) {
+//         panic!("This hasher only takes u16");
+//     }
 
-    fn write_u16(&mut self, i: u16) {
-        self.0 = i;
-    }
-}
+//     fn write_u16(&mut self, i: u16) {
+//         self.0 = i;
+//     }
+// }
