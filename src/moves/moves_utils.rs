@@ -4,7 +4,6 @@ use crate::{
 };
 use std::{
     fmt::{self, Display},
-    hash::{Hash, Hasher},
     str::FromStr,
 };
 
@@ -33,24 +32,8 @@ impl Move {
         Self(0)
     }
 
-    pub fn from_destination(square: &Square) -> Self {
-        Self(square.as_u16())
-    }
-
-    pub fn from_origin(origin: &Square) -> Self {
-        Self(origin.as_u16() << 6)
-    }
-
     pub fn from_origin_and_destination(destination: &Square, origin: &Square) -> Self {
         Self(destination.as_u16() | (origin.as_u16() << 6))
-    }
-
-    pub fn set_destination(&mut self, square: &Square) {
-        self.0 |= square.as_u16()
-    }
-
-    pub fn set_origin(&mut self, square: &Square) {
-        self.0 |= square.as_u16() << 6
     }
 
     pub fn set_castling(&mut self) {
@@ -152,44 +135,6 @@ impl fmt::Debug for Move {
 
 impl Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let promotion_str = if self.special_move() == 1 {
-            match self.get_promotion_piece() {
-                Pieces::QUEEN => "q",
-                Pieces::KNIGHT => "n",
-                Pieces::ROOK => "r",
-                Pieces::BISHOP => "b",
-                _ => panic!("wrong promotion piece"),
-            }
-        } else {
-            ""
-        };
-
-        write!(
-            f,
-            "{}{}{}",
-            self.get_origin(),
-            self.get_destination(),
-            promotion_str,
-        )
-    }
-}
-
-impl Hash for Move {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_u16(self.0);
-    }
-}
-
-impl Hasher for Move {
-    fn finish(&self) -> u64 {
-        self.0 as u64
-    }
-
-    fn write(&mut self, _bytes: &[u8]) {
-        panic!("This hasher only takes u16");
-    }
-
-    fn write_u16(&mut self, i: u16) {
-        self.0 = i;
+        write!(f, "{}", self.to_long_string())
     }
 }
