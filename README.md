@@ -15,8 +15,9 @@
    - [ ] properly
  - [ ] Opening tables
  - [ ] Syzygy endgame tables
- - [ ] Repetition draw
+ - [X] Repetition draw
  - [X] Checkmate
  - [X] Basic Time control
+ - [ ] Material draw
  - [ ] Clean up pawns
  - [ ] Clean up checks

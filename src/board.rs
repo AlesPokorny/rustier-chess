@@ -18,13 +18,14 @@ use crate::types::{
 };
 use crate::utils::zobrist::{ZobristHash, ZobristHasher};
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Board {
     pub colors: [BitBoard; 2],
     pub pieces: [[BitBoard; 6]; 2],
     pub all_pieces: BitBoard,
     pub state: State,
     pub zobrist: ZobristHash,
+    pub position_history: Vec<ZobristHash>,
 }
 
 impl Board {
@@ -34,6 +35,19 @@ impl Board {
             hasher,
         )
         .unwrap()
+    }
+
+    pub fn check_repeat_draw(&self) -> bool {
+        let pos_history_len = self.position_history.len();
+        if self.state.half_moves < 6 {
+            return false;
+        }
+        self.position_history[(pos_history_len - self.state.half_moves as usize)..pos_history_len]
+            .iter()
+            .filter(|history| history == &&self.zobrist)
+            .collect::<Vec<&ZobristHash>>()
+            .len()
+            >= 3
     }
 
     pub fn clear_piece(&mut self, square: &Square, piece: usize, color: usize) {
@@ -224,6 +238,7 @@ impl Board {
                 self.zobrist ^=
                     hasher.hash_piece_at_square(&Pieces::ROOK, &self.state.turn, &rook_destination);
                 self.state.castling.remove_color_castling(self.state.turn);
+                self.state.reset_half_move();
             }
             _ => panic!("Boom, invalid special move"),
         }
@@ -271,6 +286,7 @@ impl Board {
             self.state.increment_full_move();
         }
         self.state.change_turn();
+        self.position_history.push(self.zobrist);
 
         UnmakeMoveHelper {
             origin,
@@ -340,8 +356,10 @@ impl Board {
         }
         self.state.en_passant = helper.prev_en_passant;
         self.state.castling = helper.prev_castling;
+        self.state.half_moves = helper.prev_halfmove;
         self.zobrist = helper.prev_hash;
         self.state.castling = helper.prev_castling;
+        self.position_history.pop();
         self.sync_all_pieces();
     }
 
@@ -383,6 +401,7 @@ impl Board {
             all_pieces: BitBoard::zeros(),
             state: State::default(),
             zobrist: ZobristHash::zero(),
+            position_history: Vec::with_capacity(50),
         }
     }
 
@@ -517,8 +536,10 @@ impl Board {
             all_pieces,
             state,
             zobrist: ZobristHash::new(0), // default board hash with polyglot randoms
+            position_history: Vec::with_capacity(50),
         };
         board.zobrist = hasher.hash_everyting(&board);
+        board.position_history.push(board.zobrist);
 
         Ok(board)
     }

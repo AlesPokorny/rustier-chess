@@ -21,6 +21,7 @@ fn main() {
 
     println!("Search depth 7 took {} seconds", secs);
 
+    UCI_STOP.store(false, Ordering::Relaxed);
     let mut bot = Bot::with_depth(5, TimeControl::max());
 
     let now = Instant::now();

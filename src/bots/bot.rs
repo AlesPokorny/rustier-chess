@@ -151,6 +151,9 @@ impl Bot {
         beta: i32,
         depth: u8,
     ) -> (i32, u64) {
+        if board.check_repeat_draw() {
+            return (0, 1);
+        }
         // TODO: Figure out a better way to stop instead of returning 0
         if UCI_STOP.load(Ordering::Relaxed) {
             return (0, 0);
@@ -163,9 +166,10 @@ impl Bot {
             let unmake_move_helper = board.make_move(&new_move, hasher);
             let (opponent_score, nodes) =
                 self.alpha_beta(board, move_gen_masks, hasher, -beta, -alpha, depth - 1);
-            board.unmake_move(unmake_move_helper);
             let score = -opponent_score;
             nodes_checked += nodes;
+
+            board.unmake_move(unmake_move_helper);
 
             if score >= beta {
                 return (beta, nodes_checked);
@@ -301,17 +305,22 @@ mod test_bot_evaluation {
         println!("{}", best_move.to_long_string())
     }
 
-    // #[test]
-    // fn test_a() {
-    //     let move_gen_masks = MoveGenMasks::load();
-    //     let hasher = ZobristHasher::load();
-    //     let mut board = Board::from_fen("8/5k1K/8/6q1/8/8/8/8 b - - 0 1", &hasher).unwrap();
-    //     let mut bot = Bot::default();
+    #[test]
+    fn test_a() {
+        let move_gen_masks = MoveGenMasks::load();
+        let hasher = ZobristHasher::load();
+        let mut board = Board::from_fen("8/5k1K/8/6q1/8/8/8/8 b - - 0 1", &hasher).unwrap();
+        let mut bot = Bot::default();
 
-    //     println!("{}", board);
+        let moves = board.get_legal_moves(&move_gen_masks, &hasher);
 
-    //     let best_move = bot.get_best_move(&mut board, &move_gen_masks, &hasher);
+        println!("{}", board.position_history.len());
+        println!("{}", board.state.half_moves);
 
-    //     println!("{}", best_move);
-    // }
+        // println!("{}", board);
+
+        // let best_move = bot.get_best_move(&mut board, &move_gen_masks, &hasher);
+
+        // println!("{}", best_move);
+    }
 }
