@@ -7,6 +7,12 @@ use crate::{
     types::{bitboard::BitBoard, piece::Pieces, square::Square},
 };
 
+const MOVES_FOLDER_PATH: &str = "./data/moves/";
+const KING_MOVES_FILE: &str = "king.bin";
+const KNIGHT_MOVES_FILE: &str = "knight.bin";
+const ROOK_MOVES_FILE: &str = "rook.bin";
+const BISHOP_MOVES_FILE: &str = "bishop.bin";
+
 pub struct MoveGenMasks {
     pub king_moves: Vec<BitBoard>,
     pub knight_moves: Vec<BitBoard>,
@@ -16,16 +22,20 @@ pub struct MoveGenMasks {
 
 impl MoveGenMasks {
     pub fn load() -> Self {
-        let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, KING_MOVES_FILE)).unwrap();
+        Self::load_from_path(MOVES_FOLDER_PATH)
+    }
+
+    pub fn load_from_path(path: &str) -> Self {
+        let mut reader = File::open(format!("{}{}", path, KING_MOVES_FILE)).unwrap();
         let king_moves = deserialize_from::<&mut File, Vec<BitBoard>>(&mut reader).unwrap();
 
-        let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, KNIGHT_MOVES_FILE)).unwrap();
+        let mut reader = File::open(format!("{}{}", path, KNIGHT_MOVES_FILE)).unwrap();
         let knight_moves = deserialize_from::<&mut File, Vec<BitBoard>>(&mut reader).unwrap();
 
-        let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, ROOK_MOVES_FILE)).unwrap();
+        let mut reader = File::open(format!("{}{}", path, ROOK_MOVES_FILE)).unwrap();
         let rook_moves = deserialize_from::<&mut File, Vec<Vec<BitBoard>>>(&mut reader).unwrap();
 
-        let mut reader = File::open(format!("{}{}", MOVES_FOLDER_PATH, BISHOP_MOVES_FILE)).unwrap();
+        let mut reader = File::open(format!("{}{}", path, BISHOP_MOVES_FILE)).unwrap();
         let bishop_moves = deserialize_from::<&mut File, Vec<Vec<BitBoard>>>(&mut reader).unwrap();
 
         Self {
@@ -36,12 +46,6 @@ impl MoveGenMasks {
         }
     }
 }
-
-const MOVES_FOLDER_PATH: &str = "./data/moves/";
-const KING_MOVES_FILE: &str = "king.bin";
-const KNIGHT_MOVES_FILE: &str = "knight.bin";
-const ROOK_MOVES_FILE: &str = "rook.bin";
-const BISHOP_MOVES_FILE: &str = "bishop.bin";
 
 fn generate_knight_moves(square: &Square) -> BitBoard {
     let i8_bit = square.as_u8() as i8;

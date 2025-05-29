@@ -6,5 +6,5 @@ pub mod game;
 mod magic;
 pub mod moves;
 pub mod perft;
-mod types;
+pub mod types;
 pub mod utils;

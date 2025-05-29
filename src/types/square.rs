@@ -1,5 +1,5 @@
 use std::{
-    fmt::Display,
+    fmt::{Debug, Display},
     ops::{Add, Shl, Shr, Sub},
     str::FromStr,
     string::ParseError,
@@ -7,7 +7,7 @@ use std::{
 
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(PartialEq, Eq, Debug, Clone, Copy, Hash, Deserialize, Serialize)]
+#[derive(PartialEq, Eq, Clone, Copy, Hash, Deserialize, Serialize)]
 pub struct Square(u8);
 
 impl Square {
@@ -58,9 +58,16 @@ impl Display for Square {
         let file = (self.get_file() + 97) as char;
         let row = char::from_digit((self.get_rank() + 1) as u32, 10).unwrap();
 
-        write!(f, "{}{}", file, row)?;
+        write!(f, "{}{}", file, row)
+    }
+}
 
-        Ok(())
+impl Debug for Square {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let file = (self.get_file() + 97) as char;
+        let row = char::from_digit((self.get_rank() + 1) as u32, 10).unwrap();
+
+        write!(f, "{}{}", file, row)
     }
 }
 

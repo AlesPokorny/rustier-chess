@@ -213,17 +213,13 @@ impl Board {
             }
             3 => {
                 // 3 castling
-                let rook_origin_file: u8;
-                let rook_destination_file: u8;
-                if destination.get_file() == 2 {
+                let (rook_origin_file, rook_destination_file) = if destination.get_file() == 2 {
                     // long
-                    rook_origin_file = 0;
-                    rook_destination_file = 3;
+                    (0, 3)
                 } else {
                     // short
-                    rook_origin_file = 7;
-                    rook_destination_file = 5;
-                }
+                    (7, 5)
+                };
                 let rank = origin.get_rank() * 8;
                 let rook_origin = Square::new(rank + rook_origin_file);
                 let rook_destination = Square::new(rank + rook_destination_file);

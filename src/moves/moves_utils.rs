@@ -7,7 +7,7 @@ use std::{
     str::FromStr,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Hash)]
 /// bit 0..5     destination
 /// bit 6..11    origin
 /// bit 12..13   promotion piece (0 queen, 1 rook, 2 bishop, 3 knight)
