@@ -18,9 +18,9 @@ use crate::game::UCI_STOP;
 
 use super::{pesto::PeSTO, time_control::TimeControl};
 
-const MIN_VALUE: i32 = -1000000;
-const MAX_VALUE: i32 = 1000000;
-const CHECKMATE_SCORE: i32 = 990000;
+const MIN_VALUE: i32 = -1_000_000;
+const MAX_VALUE: i32 = 1_000_000;
+const CHECKMATE_SCORE: i32 = 990_000;
 
 pub struct Bot {
     evaluation_cache: HashMap<ZobristHash, i32>,
@@ -111,7 +111,7 @@ impl Bot {
             return (best_value, 1);
         }
 
-        let mut nodes_checked = 0;
+        let mut nodes_checked = 1;
 
         if alpha < best_value {
             alpha = best_value;
@@ -161,8 +161,13 @@ impl Bot {
         if depth == 0 {
             return self.quiescence(alpha, beta, board, move_gen_masks, hasher);
         }
+
         let mut nodes_checked = 0;
-        for new_move in board.get_legal_moves(move_gen_masks, hasher) {
+        let legal_moves = board.get_legal_moves(move_gen_masks, hasher);
+        if legal_moves.len() == 0 {
+            return (-CHECKMATE_SCORE, 1);
+        }
+        for new_move in legal_moves.iter() {
             let unmake_move_helper = board.make_move(&new_move, hasher);
             let (opponent_score, nodes) =
                 self.alpha_beta(board, move_gen_masks, hasher, -beta, -alpha, depth - 1);
@@ -219,7 +224,7 @@ impl Bot {
         }
         UCI_STOP.store(true, Ordering::Relaxed);
         time_thread.join().unwrap();
-        results.into_iter().last().unwrap()
+        results.into_iter().filter(|the_move| the_move != &Move::new()).last().unwrap()
     }
 
     pub fn get_best_move_for_depth(
@@ -230,7 +235,7 @@ impl Bot {
         hasher: &ZobristHasher,
     ) -> (i32, Move) {
         let mut nodes_checked = 0;
-        let mut best_move: (i32, Move) = (0, Move::new());
+        let mut best_move = (MIN_VALUE, Move::new());
         let mut alpha = MIN_VALUE;
         let beta = MAX_VALUE;
 
@@ -309,13 +314,16 @@ mod test_bot_evaluation {
     fn test_a() {
         let move_gen_masks = MoveGenMasks::load();
         let hasher = ZobristHasher::load();
-        let mut board = Board::from_fen("8/5k1K/8/6q1/8/8/8/8 b - - 0 1", &hasher).unwrap();
-        let mut bot = Bot::default();
+        let mut board = Board::from_fen("k7/5R2/6Q1/8/8/8/8/5K2 b - - 0 1", &hasher).unwrap();
+        let mut bot = Bot::with_depth(10, TimeControl::new(0, 0, 0, 0, Some(10)));
 
-        let moves = board.get_legal_moves(&move_gen_masks, &hasher);
+        let the_move = bot.get_best_move(&mut board, &move_gen_masks, &hasher);
+        println!("{}", the_move);
 
-        println!("{}", board.position_history.len());
-        println!("{}", board.state.half_moves);
+        // let moves = board.get_legal_moves(&move_gen_masks, &hasher);
+
+        // println!("{}", board.position_history.len());
+        // println!("{}", board.state.half_moves);
 
         // println!("{}", board);
 
